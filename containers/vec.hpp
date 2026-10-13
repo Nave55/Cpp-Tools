@@ -32,6 +32,10 @@ inline void printValue(String s) noexcept {
   s.print();
 }
 
+inline void printValue(String s) noexcept {
+  s.print();
+}
+
 template <typename T>
 class Vec {
 private:
