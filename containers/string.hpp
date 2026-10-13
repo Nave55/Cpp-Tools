@@ -172,6 +172,10 @@ public:
   }
 
   void print() const noexcept {
+    std::printf("%s", ptr);
+  }
+
+  void println() const noexcept {
     std::printf("%s\n", ptr);
   }
 
