@@ -197,11 +197,12 @@ public:
     return result;
   }
 
-  void print() const noexcept {
+  template <typename PrintFn>
+  void print(PrintFn printFn) const noexcept {
     size_t id = 0;
     std::printf("HashSet { ");
     for (auto&& k : *this) {
-      printValue(k);
+      printFn(k);
       if (id < len - 1) std::printf(", ");
       id++;
     }
