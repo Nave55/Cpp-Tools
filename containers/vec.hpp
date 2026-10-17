@@ -1,40 +1,10 @@
 #pragma once
 
+#include <algorithm>
+#include <optional>
 #include <span>
 #include <typeinfo>
-#include "string.hpp"
-
-inline void printValue(int v) noexcept {
-  printf("%d", v);
-}
-
-inline void printValue(size_t v) noexcept {
-  printf("%zu", v);
-}
-
-inline void printValue(float v) noexcept {
-  printf("%f", v);
-}
-
-inline void printValue(double v) noexcept {
-  printf("%f", v);
-}
-
-inline void printValue(const char* s) noexcept {
-  printf("%s", s);
-}
-
-inline void printValue(char c) noexcept {
-  printf("%c", c);
-}
-
-inline void printValue(String s) noexcept {
-  s.print();
-}
-
-inline void printValue(String s) noexcept {
-  s.print();
-}
+#include "../memory/allocators.hpp"
 
 template <typename T>
 class Vec {
@@ -191,7 +161,9 @@ public:
   }
 
   std::span<T> slice(size_t start, size_t end) const noexcept {
-    return std::span<T>(ptr, len).subspan(start, end);
+    if (start >= end) return {};
+    size_t actual_end = std::min(len, end);
+    return std::span<T>(begin() + start, begin() + actual_end);
   }
 
   std::span<T> toSpan() const noexcept {
@@ -202,35 +174,23 @@ public:
     return typeid(T).name();
   }
 
-  void print() const noexcept {
-    if (len == 0) {
-      std::printf("[]\n");
-      return;
+  template <typename PrintFn>
+  void print(PrintFn printFn) const noexcept {
+    std::printf("[");
+    for (size_t i = 0; i < len; ++i) {
+      if (i > 0) std::printf(", ");
+      printFn(ptr[i]);
     }
-    for (size_t i = 0; i < len; i++) {
-      if (i == 0) {
-        std::printf("[");
-        printValue(ptr[i]);
-      } else if (i < len - 1) {
-        std::printf(", ");
-        printValue(ptr[i]);
-      } else {
-        std::printf(", ");
-        printValue(ptr[i]);
-        std::printf("]\n");
-      }
-
-      if (len == 1) std::printf("]\n");
-    }
+    std::printf("]\n");
   }
 
   void printInfo() const noexcept {
     std::printf("length: ");
-    printValue(len);
+    std::printf("%zu", len);
     std::printf(", capacity: ");
-    printValue(cap);
+    std::printf("%zu", cap);
     std::printf(", type: ");
-    printValue(type());
+    printf("%s", type());
     std::printf("\n");
   }
 
@@ -451,28 +411,3 @@ private:
     }
   }
 };
-
-// print for spans
-template <typename T>
-void print(std::span<T> sli) noexcept {
-  size_t len = sli.size();
-  if (sli.size() == 0) {
-    std::printf("[]\n");
-    return;
-  }
-  for (size_t i = 0; i < len; i++) {
-    if (i == 0) {
-      std::printf("[");
-      printValue(sli[i]);
-    } else if (i < len - 1) {
-      std::printf(", ");
-      printValue(sli[i]);
-    } else {
-      std::printf(", ");
-      printValue(sli[i]);
-      std::printf("]\n");
-    }
-
-    if (len == 1) std::printf("]\n");
-  }
-}
