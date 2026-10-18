@@ -5,7 +5,7 @@
 - **Custom Allocators** - Arena, Pool, Stack
 - **Custom Pmr Allocator** - Arena
 - **Array** - Array<T, N>
-- **Fixed Dynamic Array** - FixedVec\<T, N>
+- **Fixed Dynamic Array** - FixedVector\<T, N>
 - **Dynamic Array** - Vector\<T>
 - **Hash Table** - HashMap\<K, V>
 - **Hash Set** - HashSet\<V> 
