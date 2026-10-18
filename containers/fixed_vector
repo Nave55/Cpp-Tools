@@ -7,14 +7,14 @@
 #include <typeinfo>
 
 template <typename T, size_t N>
-struct FixedVec {
+struct FixedVector {
   T arr[N] = {};
   size_t len = 0;
   size_t cap = N;
 
-  explicit FixedVec() = default;
+  explicit FixedVector() = default;
 
-  explicit FixedVec(std::initializer_list<T> lst) {
+  explicit FixedVector(std::initializer_list<T> lst) {
     size_t count = (N < lst.size()) ? N : lst.size();
     auto it = lst.begin();
     for (size_t i = 0; i < count; ++i) {
@@ -23,7 +23,7 @@ struct FixedVec {
     len = count;
   }
 
-  FixedVec(const FixedVec& other)
+  FixedVector(const FixedVector& other)
       : len(other.len),
         cap(other.cap) {
     for (size_t i = 0; i < other.len; ++i) {
@@ -31,7 +31,7 @@ struct FixedVec {
     }
   }
 
-  FixedVec(FixedVec&& other) noexcept
+  FixedVector(FixedVector&& other) noexcept
       : len(other.len),
         cap(other.cap) {
     for (size_t i = 0; i < other.len; ++i) {
@@ -40,7 +40,7 @@ struct FixedVec {
     other.len = 0;
   }
 
-  FixedVec& operator=(const FixedVec& other) {
+  FixedVector& operator=(const FixedVector& other) {
     if (this != &other) {
       for (size_t i = 0; i < other.len; ++i) {
         arr[i] = other.arr[i];
@@ -51,7 +51,7 @@ struct FixedVec {
     return *this;
   }
 
-  FixedVec& operator=(FixedVec&& other) noexcept {
+  FixedVector& operator=(FixedVector&& other) noexcept {
     if (this != &other) {
       for (size_t i = 0; i < other.len; ++i) {
         arr[i] = std::move(other.arr[i]);
@@ -63,7 +63,7 @@ struct FixedVec {
     return *this;
   }
 
-  ~FixedVec() = default;
+  ~FixedVector() = default;
 
   T& operator[](size_t i) noexcept {
     return arr[i];
