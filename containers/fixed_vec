@@ -7,13 +7,11 @@
 #include <typeinfo>
 
 template <typename T, size_t N>
-class FixedVec {
-public:
+struct FixedVec {
   T arr[N] = {};
   size_t len = 0;
   size_t cap = N;
 
-public:
   explicit FixedVec() = default;
 
   explicit FixedVec(std::initializer_list<T> lst) {
@@ -100,7 +98,7 @@ public:
   }
 
   std::span<T> toSpan() noexcept {
-    return std::span<T>(begin(), len);
+    return std::span<T>(&arr[0], len);
   }
 
   const char* type() const noexcept {
