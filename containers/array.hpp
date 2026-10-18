@@ -199,12 +199,14 @@ public:
     if (ind >= len) return;
     for (size_t i = ind; i + 1 < len; ++i) {
       arr[i] = std::move(arr[i + 1]);
+      arr[i + 1] = T();
     }
   }
 
   constexpr void unorderedRemove(size_t ind) noexcept {
     if (ind >= len) return;
     arr[ind] = std::move(arr[len - 1]);
+    arr[len - 1] = T();
   }
 
   constexpr void deleteVal(T val) noexcept {
