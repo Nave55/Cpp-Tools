@@ -11,6 +11,7 @@
 - **Hash Set** - HashSet\<V> 
 - **Dynamic String** - String
 - **Fixed-Size string** - Str
+- **Pair** - Pair<T1, T2> 
 - **Tuple** - Tuple<T..>
 - **Smart Pointers** - Unique, Shared, Weak, Intrusive
 - **Memory Tracking**
