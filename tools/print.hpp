@@ -2,8 +2,8 @@
 
 #include <array>
 #include <iostream>
-#include "../containers/pair.hpp"
 #include <span>
+#include "../containers/pair.hpp"
 #include "../containers/str.hpp"
 #include "../containers/string.hpp"
 
