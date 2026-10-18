@@ -7,7 +7,7 @@
 #include "../memory/allocators.hpp"
 
 template <typename T>
-class Vec {
+class Vector {
 private:
   MemAllocator* m_alloc;
 
@@ -17,7 +17,7 @@ public:
   T* ptr = nullptr;
 
 public:
-  explicit Vec(MemAllocator& alloc = arena_alloc)
+  explicit Vector(MemAllocator& alloc = arena_alloc)
       : m_alloc{&alloc},
         len{0},
         cap{8},
@@ -27,7 +27,7 @@ public:
     }
   }
 
-  explicit Vec(size_t cap, MemAllocator& alloc = arena_alloc)
+  explicit Vector(size_t cap, MemAllocator& alloc = arena_alloc)
       : m_alloc{&alloc},
         len{0},
         cap{cap},
@@ -36,7 +36,7 @@ public:
       panic("Initial Vec capacity does not fit in a pool chunk");
   }
 
-  explicit Vec(size_t sz, size_t cap, MemAllocator& alloc = arena_alloc)
+  explicit Vector(size_t sz, size_t cap, MemAllocator& alloc = arena_alloc)
       : m_alloc{&alloc},
         len{sz},
         cap{cap},
@@ -47,7 +47,8 @@ public:
     for (size_t i = 0; i < sz; ++i) new (&ptr[i]) T();
   }
 
-  explicit Vec(std::initializer_list<T> lst, MemAllocator& alloc = arena_alloc)
+  explicit Vector(std::initializer_list<T> lst,
+                  MemAllocator& alloc = arena_alloc)
       : m_alloc{&alloc},
         len{lst.size()},
         cap{lst.size()},
@@ -59,8 +60,8 @@ public:
     std::copy(lst.begin(), lst.end(), ptr);
   }
 
-  explicit Vec(std::initializer_list<T> lst, size_t cap,
-               MemAllocator& alloc = arena_alloc)
+  explicit Vector(std::initializer_list<T> lst, size_t cap,
+                  MemAllocator& alloc = arena_alloc)
       : m_alloc{&alloc},
         len{lst.size()},
         cap{std::max(cap, lst.size())},
@@ -72,11 +73,11 @@ public:
     std::copy(lst.begin(), lst.end(), ptr);
   }
 
-  ~Vec() {
+  ~Vector() {
     if (m_alloc->getType() == AllocType::Pool) m_alloc->free(ptr);
   }
 
-  Vec(const Vec& vec)
+  Vector(const Vector& vec)
       : m_alloc{vec.m_alloc},
         len{vec.len},
         cap{vec.cap},
@@ -85,7 +86,7 @@ public:
     std::copy(vec.ptr, vec.ptr + vec.len, ptr);
   }
 
-  Vec(Vec&& vec)
+  Vector(Vector&& vec)
       : m_alloc{vec.m_alloc},
         len{vec.len},
         cap{vec.cap},
@@ -95,7 +96,7 @@ public:
     vec.cap = 0;
   }
 
-  Vec& operator=(const Vec& other) {
+  Vector& operator=(const Vector& other) {
     if (this == &other) return *this;
 
     if (m_alloc->getType() == AllocType::Pool) {
@@ -115,7 +116,7 @@ public:
     return *this;
   }
 
-  Vec& operator=(Vec&& other) noexcept {
+  Vector& operator=(Vector&& other) noexcept {
     if (this == &other) return *this;
 
     if (ptr && m_alloc && m_alloc->getType() == AllocType::Pool) {
@@ -160,13 +161,13 @@ public:
     return ptr + len;
   }
 
-  std::span<T> slice(size_t start, size_t end) const noexcept {
+  std::span<T> slice(size_t start, size_t end) noexcept {
     if (start >= end) return {};
     size_t actual_end = std::min(len, end);
     return std::span<T>(begin() + start, begin() + actual_end);
   }
 
-  std::span<T> toSpan() const noexcept {
+  std::span<T> toSpan() noexcept {
     return std::span<T>(ptr, len);
   }
 
