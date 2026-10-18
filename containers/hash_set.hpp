@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vec.hpp"
+#include "vector.hpp"
 
 template <typename K, typename Hash = std::hash<K>,
           typename KeyEq = std::equal_to<K>>
