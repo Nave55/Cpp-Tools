@@ -8,7 +8,7 @@
 - **Fixed Dynamic Array** - FixedVec\<T, N>
 - **Dynamic Array** - Vec\<T>
 - **Hash Table** - HashMap\<K, V>
-- **Set** - HashSet\<V> 
+- **Hash Set** - HashSet\<V> 
 - **Dynamic String** - String
 - **Fixed-Size string** - Str
 - **Tuple** - Tuple<T..>
