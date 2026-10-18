@@ -7,12 +7,10 @@
 #include <typeinfo>
 
 template <typename T, size_t N>
-class Array {
-public:
+struct Array {
   T arr[N] = {};
   size_t len = 0;
 
-public:
   constexpr explicit Array() = default;
 
   constexpr explicit Array(std::initializer_list<T> lst) {
