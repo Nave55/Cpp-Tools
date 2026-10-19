@@ -2,7 +2,6 @@
 
 #include "vector.hpp"
 
-// HashMap - (Arena/Stack/Pool)
 template <typename K, typename V, typename Hash = std::hash<K>, typename KeyEq = std::equal_to<K>>
 class HashMap {
 public:
@@ -25,8 +24,8 @@ private:
   Vector<void*> m_slabs;  // raw slab pointers
 
 public:
-  explicit HashMap(MemAllocator& alloc = arena_alloc, size_t slab_size = 32, size_t slabs = 4,
-                   size_t bucket_amt = 64)
+  explicit HashMap(size_t slab_size = 32, size_t slabs = 4, size_t bucket_amt = 64,
+                   MemAllocator& alloc = heap_alloc)
       : slab_size(slab_size),
         bucket_amt(m_nextPow2(bucket_amt)),
         m_alloc(&alloc),
@@ -43,16 +42,16 @@ public:
     slab_bytes = slab_size * sizeof(m_Node);
   }
 
-  explicit HashMap(std::initializer_list<std::pair<K, V>> init, MemAllocator& alloc = arena_alloc,
-                   size_t bucket_amt = 64)
-      : HashMap(alloc, init.size(), 1, bucket_amt) {
+  explicit HashMap(std::initializer_list<std::pair<K, V>> init, size_t bucket_amt = 64,
+                   MemAllocator& alloc = heap_alloc)
+      : HashMap(init.size(), 1, bucket_amt, alloc) {
     for (auto& [k, v] : init) insert(k, v);
     slab_bytes = slab_size * sizeof(m_Node);
   }
 
-  explicit HashMap(std::initializer_list<std::pair<K, V>> init, MemAllocator& alloc,
-                   size_t slab_size, size_t slabs = 4, size_t bucket_amt = 64)
-      : HashMap(alloc, slab_size, slabs, bucket_amt) {
+  explicit HashMap(std::initializer_list<std::pair<K, V>> init, size_t slab_size, size_t slabs = 4,
+                   size_t bucket_amt = 64, MemAllocator& alloc = heap_alloc)
+      : HashMap(slab_size, slabs, bucket_amt, alloc) {
     for (auto& [k, v] : init) insert(k, v);
     slab_bytes = slab_size * sizeof(m_Node);
   }
