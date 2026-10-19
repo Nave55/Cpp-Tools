@@ -2,7 +2,7 @@
 
 **Currently Contains:**
 
-- **Custom Allocators** - Arena, Pool, Stack
+- **Custom Allocators** - Arena, Pool, Stack, Heap
 - **Custom Pmr Allocator** - Arena
 - **Array** - Array<T, N>
 - **Fixed Dynamic Array** - FixedVector\<T, N>
