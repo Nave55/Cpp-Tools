@@ -22,7 +22,7 @@ public:
   // ptr[len] == '\0'
 
   // empty string with initial capacity (including room for '\0')
-  explicit String(size_t init_cap = 16, MemAllocator& alloc = heap_alloc)
+  explicit String(size_t init_cap = 16, MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{0},
         cap{std::max<size_t>(1, init_cap)},
@@ -34,7 +34,7 @@ public:
   }
 
   // from C-string
-  explicit String(const char* str, MemAllocator& alloc = heap_alloc)
+  explicit String(const char* str, MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{std::strlen(str)},
         cap{std::max<size_t>(1, len)},
@@ -46,7 +46,7 @@ public:
   }
 
   // from C-string
-  explicit String(const char* str, size_t init_cap, MemAllocator& alloc = heap_alloc)
+  explicit String(const char* str, size_t init_cap, MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{std::strlen(str)} {
     if (init_cap < len) panic("String(cap): capacity too small for input string");
@@ -63,11 +63,11 @@ public:
     std::memcpy(ptr, str, len + 1);  // includes '\0'
   }
 
-  ~String() {
+  ~String() noexcept {
     if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
   }
 
-  String(const String& str)
+  String(const String& str) noexcept
       : m_alloc{str.m_alloc},
         len{str.len},
         cap{str.cap},
@@ -75,7 +75,7 @@ public:
     std::memcpy(ptr, str.ptr, len + 1);  // copy including '\0'
   }
 
-  String(String&& str)
+  String(String&& str) noexcept
       : m_alloc{str.m_alloc},
         len{str.len},
         cap{str.cap},
@@ -85,7 +85,7 @@ public:
     str.cap = 0;
   }
 
-  String& operator=(const String& other) {
+  String& operator=(const String& other) noexcept {
     if (this == &other) return *this;
 
     if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
@@ -102,7 +102,7 @@ public:
     return *this;
   }
 
-  String& operator=(String&& other) {
+  String& operator=(String&& other) noexcept {
     if (this == &other) return *this;
 
     if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
@@ -407,7 +407,7 @@ public:
   }
 
 private:
-  void m_resizeCapacity(size_t new_cap) {
+  void m_resizeCapacity(size_t new_cap) noexcept {
     if (new_cap < len) panic("String resize less than length");
     size_t old_bytes = (cap + 1) * sizeof(char);
     size_t new_bytes = (new_cap + 1) * sizeof(char);
