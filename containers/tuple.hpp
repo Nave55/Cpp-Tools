@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cstddef>
 #include <utility>
 
-template <std::size_t I, typename T>
+template <size_t I, typename T>
 struct TupleLeaf {
-  T value;
+  [[no_unique_address]] T value;
 
   constexpr TupleLeaf() = default;
 
@@ -13,7 +14,7 @@ struct TupleLeaf {
       : value(std::forward<U>(v)) {}
 };
 
-template <std::size_t I, typename T, typename... Ts>
+template <size_t I, typename T, typename... Ts>
 struct NthType {
   using Type = typename NthType<I - 1, Ts...>::Type;
 };
@@ -26,10 +27,12 @@ struct NthType<0, T, Ts...> {
 template <typename Seq, typename... Ts>
 struct TupleImpl;
 
-template <std::size_t... Is, typename... Ts>
+template <size_t... Is, typename... Ts>
 struct TupleImpl<std::index_sequence<Is...>, Ts...> : TupleLeaf<Is, Ts>... {
-  template <typename... Us>
+  constexpr TupleImpl() = default;
 
+  template <typename... Us>
+    requires(sizeof...(Us) == sizeof...(Ts))
   constexpr explicit TupleImpl(Us&&... us)
       : TupleLeaf<Is, Ts>(std::forward<Us>(us))... {}
 };
@@ -52,14 +55,26 @@ struct Tuple : TupleImpl<std::index_sequence_for<Ts...>, Ts...> {
       : Base(std::forward<Us>(us)...) {}
 
   template <size_t I>
-  constexpr auto& get() {
+  constexpr decltype(auto) get() & {
     static_assert(I < sizeof...(Ts));
     return static_cast<Leaf_t<I>&>(*this).value;
   }
 
   template <size_t I>
-  constexpr auto& get() const {
+  constexpr decltype(auto) get() const& {
     static_assert(I < sizeof...(Ts));
     return static_cast<const Leaf_t<I>&>(*this).value;
+  }
+
+  template <size_t I>
+  constexpr decltype(auto) get() && {
+    static_assert(I < sizeof...(Ts));
+    return std::move(static_cast<Leaf_t<I>&>(*this).value);
+  }
+
+  template <size_t I>
+  constexpr decltype(auto) get() const&& {
+    static_assert(I < sizeof...(Ts));
+    return std::move(static_cast<const Leaf_t<I>&>(*this).value);
   }
 };
