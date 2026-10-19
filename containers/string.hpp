@@ -17,7 +17,7 @@ public:
 
 public:
   // empty string with initial capacity (including room for '\0')
-  explicit String(size_t cap = 16, MemAllocator& alloc = arena_alloc)
+  explicit String(size_t cap = 16, MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{0},
         cap{cap},
@@ -29,7 +29,7 @@ public:
   }
 
   // from C-string
-  explicit String(const char* str, MemAllocator& alloc = arena_alloc)
+  explicit String(const char* str, MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{std::strlen(str)},
         cap{len + 1},
@@ -41,7 +41,7 @@ public:
   }
 
   // from C-string
-  explicit String(const char* str, size_t cap, MemAllocator& alloc = arena_alloc)
+  explicit String(const char* str, size_t cap, MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{std::strlen(str)} {
     if (cap < len + 1) panic("String(cap): capacity too small for input string");
