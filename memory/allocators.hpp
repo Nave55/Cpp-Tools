@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <new>
 
@@ -25,8 +26,7 @@ constexpr size_t alignForwardSize(const size_t size, const size_t alignment) {
   return (size + (alignment - 1)) & ~(alignment - 1);
 }
 
-constexpr uintptr_t alignForwardUintptr(const uintptr_t p,
-                                        const uintptr_t alignment) {
+constexpr uintptr_t alignForwardUintptr(const uintptr_t p, const uintptr_t alignment) {
   uintptr_t mask = alignment - 1;
   return (p + mask) & ~mask;
 }
@@ -42,6 +42,7 @@ inline size_t min(size_t a, size_t b) {
 }
 
 enum class AllocType {
+  Heap,
   Arena,
   Stack,
   Pool,
@@ -55,26 +56,93 @@ class MemAllocator {
 public:
   virtual ~MemAllocator() = default;
 
-  virtual void* allocate(size_t bytes, size_t alignment) noexcept = 0;
+  virtual void* memAllocate(size_t bytes, size_t alignment) noexcept = 0;
 
-  virtual void* resize(void* old_ptr, size_t old_size, size_t new_size,
-                       size_t alignment) noexcept = 0;
+  virtual void* memResize(void* old_ptr, size_t old_size, size_t new_size,
+                          size_t alignment) noexcept = 0;
 
-  virtual void free(void* ptr) noexcept = 0;
+  virtual void memFree(void* ptr) noexcept = 0;
 
-  virtual void freeAll() noexcept = 0;
+  virtual void memFreeAll() noexcept = 0;
 
   virtual bool supportsResize() const noexcept = 0;
 
-  virtual size_t getUsed() const noexcept = 0;
-
   virtual size_t getSize() const noexcept = 0;
+
+  virtual size_t getUsed() const noexcept = 0;
 
   virtual size_t getFree() const noexcept = 0;
 
   virtual size_t getChunkSize() const noexcept = 0;
 
   virtual AllocType getType() const noexcept = 0;
+};
+
+// *******************************************************
+//                      Heap Allocator
+// *******************************************************
+
+struct Heap final : public MemAllocator {
+  size_t ttl = 0;
+  size_t current_used = 0;
+
+  void* memAllocate(size_t bytes, size_t) noexcept override {
+    size_t total_bytes = bytes + sizeof(size_t);
+    size_t* raw = static_cast<size_t*>(malloc(total_bytes));
+    if (!raw) return nullptr;
+
+    *raw = bytes;
+    ttl += bytes;
+    current_used += bytes;
+
+    return static_cast<void*>(raw + 1);
+  }
+
+  void* memResize(void* old_ptr, size_t, size_t new_size, size_t) noexcept override {
+    if (!old_ptr) return memAllocate(new_size, 1);
+
+    size_t* header = static_cast<size_t*>(old_ptr) - 1;
+    size_t old_size = *header;
+
+    size_t total_bytes = new_size + sizeof(size_t);
+    size_t* raw = static_cast<size_t*>(realloc(header, total_bytes));
+    if (!raw) return nullptr;
+
+    *raw = new_size;
+    current_used = current_used - old_size + new_size;
+
+    return static_cast<void*>(raw + 1);
+  }
+
+  void memFree(void* ptr) noexcept override {
+    if (!ptr) return;
+
+    size_t* header = static_cast<size_t*>(ptr) - 1;
+    size_t size = *header;
+    current_used -= size;
+    free(header);
+  }
+
+  void memFreeAll() noexcept override {}  // does nothing
+
+  bool supportsResize() const noexcept override {
+    return true;
+  }
+  size_t getSize() const noexcept override {
+    return current_used;
+  }
+  size_t getUsed() const noexcept override {
+    return current_used;
+  }
+  size_t getFree() const noexcept override {
+    return 0;
+  }
+  size_t getChunkSize() const noexcept override {
+    return current_used;
+  }
+  AllocType getType() const noexcept override {
+    return AllocType::Heap;
+  }
 };
 
 // *******************************************************
@@ -127,13 +195,12 @@ public:
     return *this;
   }
 
-  void* allocate(size_t size, size_t alignment) noexcept override {
+  void* memAllocate(size_t size, size_t alignment) noexcept override {
     if (size == 0) panic("Size must be greater than zero");
     if (alignment > 128) alignment = 128;
 
     unsigned char* raw = m_buf + m_curr_off;
-    unsigned char* aligned =
-        static_cast<unsigned char*>(align_forward(raw, alignment));
+    unsigned char* aligned = static_cast<unsigned char*>(align_forward(raw, alignment));
 
     size_t new_off = aligned - m_buf;
     if (new_off + size > m_buf_len) panic("Arena can't allocate. Not aligned.");
@@ -145,28 +212,27 @@ public:
     return aligned;
   }
 
-  void* resize(void* old_ptr, size_t old_size, size_t new_size,
-               size_t alignment) noexcept override {
-    if (!old_ptr || old_size == 0) return allocate(new_size, alignment);
+  void* memResize(void* old_ptr, size_t old_size, size_t new_size,
+                  size_t alignment) noexcept override {
+    if (!old_ptr || old_size == 0) return memAllocate(new_size, alignment);
 
     unsigned char* p = static_cast<unsigned char*>(old_ptr);
     size_t off = p - m_buf;
 
     // In-place resize if last allocation
-    if (off == m_prev_off && m_curr_off - m_prev_off + (new_size - old_size) <=
-                                 (m_buf_len - m_prev_off)) {
+    if (off == m_prev_off &&
+        m_curr_off - m_prev_off + (new_size - old_size) <= (m_buf_len - m_prev_off)) {
       m_curr_off = m_prev_off + new_size;
 
       if (new_size > old_size) {
-        std::memset(m_buf + m_curr_off - (new_size - old_size), 0,
-                    new_size - old_size);
+        std::memset(m_buf + m_curr_off - (new_size - old_size), 0, new_size - old_size);
       }
 
       return p;
     }
 
     // Allocate fresh
-    void* newp = allocate(new_size, alignment);
+    void* newp = memAllocate(new_size, alignment);
     if (!newp) panic("New Pointer wasn't allocated in arena");
 
     std::memmove(newp, old_ptr, min(old_size, new_size));
@@ -174,24 +240,24 @@ public:
   }
 
   // does nothing don't use.
-  void free(void*) noexcept override {
+  void memFree(void*) noexcept override {
     panic("Arena Can't use free");
   }
 
-  void freeAll() noexcept override {
+  void memFreeAll() noexcept override {
     m_prev_off = m_curr_off = 0;
   }
 
   template <typename T>
   T* alloc(size_t count = 1, size_t alignment = alignof(T)) noexcept {
-    return static_cast<T*>(allocate(sizeof(T) * count, alignment));
+    return static_cast<T*>(memAllocate(sizeof(T) * count, alignment));
   }
 
   template <typename Old, typename New>
   New* resizeTyped(Old* old_mem, size_t old_count = 1, size_t new_count = 1,
                    size_t alignment = alignof(New)) noexcept {
-    return static_cast<New*>(resize(old_mem, sizeof(Old) * old_count,
-                                    sizeof(New) * new_count, alignment));
+    return static_cast<New*>(
+        memResize(old_mem, sizeof(Old) * old_count, sizeof(New) * new_count, alignment));
   }
 
   void info() {
@@ -279,8 +345,7 @@ public:
   Stack(const Stack&) = delete;
   Stack& operator=(const Stack&) = delete;
 
-  void* allocate(size_t size,
-                 size_t alignment = DEFAULT_ALIGNMENT) noexcept override {
+  void* memAllocate(size_t size, size_t alignment = DEFAULT_ALIGNMENT) noexcept override {
     if (!isPowerOfTwo(alignment)) panic("Must be a power of two");
 
     if (size <= 0) panic("Size must be greater than zero");
@@ -290,8 +355,7 @@ public:
     const uintptr_t curr_addr = base + m_curr_off;
 
     const size_t header_size = sizeof(StackHeader);
-    const size_t padding =
-        m_calcPaddingWithHeader(curr_addr, alignment, header_size);
+    const size_t padding = m_calcPaddingWithHeader(curr_addr, alignment, header_size);
 
     const size_t new_offset = m_curr_off + padding;
     if (new_offset < m_curr_off || new_offset > m_buf_len) return nullptr;
@@ -318,15 +382,15 @@ public:
   T* alloc(size_t count = 1, size_t alignment = alignof(T)) noexcept {
     if (count > SIZE_MAX / sizeof(T)) return nullptr;
 
-    void* p = allocate(sizeof(T) * count, alignment);
+    void* p = memAllocate(sizeof(T) * count, alignment);
     return static_cast<T*>(p);
   }
 
-  void* resize(void* old_ptr, size_t /*old_size*/, size_t new_size,
-               size_t alignment = DEFAULT_ALIGNMENT) noexcept override {
-    if (!old_ptr) return allocate(new_size, alignment);
+  void* memResize(void* old_ptr, size_t /*old_size*/, size_t new_size,
+                  size_t alignment = DEFAULT_ALIGNMENT) noexcept override {
+    if (!old_ptr) return memAllocate(new_size, alignment);
     if (new_size == 0) {
-      free(old_ptr);
+      memFree(old_ptr);
       return nullptr;
     }
 
@@ -365,7 +429,7 @@ public:
     }
 
     // Fallback
-    void* new_ptr = allocate(new_size, alignment);
+    void* new_ptr = memAllocate(new_size, alignment);
     if (!new_ptr) return nullptr;
 
     size_t copy_size = min(header->alloc_size, new_size);
@@ -374,7 +438,7 @@ public:
     return new_ptr;
   }
 
-  void free(void* ptr) noexcept override {
+  void memFree(void* ptr) noexcept override {
     if (!ptr) return;
 
     const uintptr_t base = reinterpret_cast<uintptr_t>(m_buf);
@@ -405,7 +469,7 @@ public:
     m_curr_off = header->prev_offset;
   }
 
-  void freeAll() noexcept override {
+  void memFreeAll() noexcept override {
     m_curr_off = 0;
   }
 
@@ -450,8 +514,7 @@ public:
   }
 
 private:
-  static constexpr size_t m_calcPaddingWithHeader(uintptr_t ptr,
-                                                  size_t alignment,
+  static constexpr size_t m_calcPaddingWithHeader(uintptr_t ptr, size_t alignment,
                                                   size_t header_size) noexcept {
     if (!isPowerOfTwo(alignment)) panic("Must be a power of two!");
 
@@ -507,26 +570,23 @@ public:
                 size_t chunk_alignment = alignof(std::max_align_t)) {
     if (buf_size <= 0) panic("Buf size <= 0");
     if (chunk_size <= 0) panic("Chunk size <= 0");
-    if (!isPowerOfTwo(chunk_alignment))
-      panic("chunk_alignment must be power of two");
+    if (!isPowerOfTwo(chunk_alignment)) panic("chunk_alignment must be power of two");
 
     m_buf_len = buf_size;
-    m_buf = static_cast<unsigned char*>(
-        ::operator new[](m_buf_len, std::align_val_t{chunk_alignment}));
-    m_chunk_size =
-        (chunk_size + (chunk_alignment - 1)) & ~(chunk_alignment - 1);
+    m_buf =
+        static_cast<unsigned char*>(::operator new[](m_buf_len, std::align_val_t{chunk_alignment}));
+    m_chunk_size = (chunk_size + (chunk_alignment - 1)) & ~(chunk_alignment - 1);
 
-    if (m_chunk_size < sizeof(PoolFreeNode))
-      panic("chunk_size too small for free list node");
+    if (m_chunk_size < sizeof(PoolFreeNode)) panic("chunk_size too small for free list node");
 
-    freeAll();
+    memFreeAll();
   }
 
   ~Pool() {
     ::operator delete[](m_buf, std::align_val_t{alignof(std::max_align_t)});
   }
 
-  void* allocate(size_t = 0, size_t = 0) noexcept override {
+  void* memAllocate(size_t = 0, size_t = 0) noexcept override {
     if (!m_head) return nullptr;
     PoolFreeNode* node = m_head;
     m_head = node->next;
@@ -535,10 +595,10 @@ public:
 
   template <typename T>
   T* alloc() {
-    return static_cast<T*>(allocate());
+    return static_cast<T*>(memAllocate());
   }
 
-  void free(void* ptr) noexcept override {
+  void memFree(void* ptr) noexcept override {
     if (!ptr) return;
 
     auto* node = static_cast<PoolFreeNode*>(ptr);
@@ -546,7 +606,7 @@ public:
     m_head = node;
   }
 
-  void freeAll() noexcept override {
+  void memFreeAll() noexcept override {
     m_head = nullptr;
     size_t count = m_buf_len / m_chunk_size;
     for (size_t i = 0; i < count; ++i) {
@@ -556,7 +616,7 @@ public:
     }
   }
 
-  void* resize(void*, size_t, size_t, size_t) noexcept override {
+  void* memResize(void*, size_t, size_t, size_t) noexcept override {
     panic("Pool Can't resize");
   }
 
@@ -610,3 +670,4 @@ public:
 extern Arena arena_alloc;
 extern Stack stack_alloc;
 extern Pool pool_alloc;
+extern Heap heap_alloc;
