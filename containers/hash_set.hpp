@@ -5,8 +5,8 @@
 template <typename K, typename Hash = std::hash<K>, typename KeyEq = std::equal_to<K>>
 class HashSet {
 public:
-  class Iterator;
-  class ConstIterator;
+  struct Iterator;
+  struct ConstIterator;
   size_t len = 0;
   size_t cap = 0;
   size_t slab_bytes = 0;
@@ -24,7 +24,7 @@ private:
 
 public:
   explicit HashSet(size_t slab_size = 32, size_t slabs = 4, size_t bucket_amt = 64,
-                   MemAllocator& alloc = heap_alloc)
+                   MemAllocator& alloc = heap_alloc) noexcept
       : slab_size(slab_size),
         bucket_amt(m_nextPow2(bucket_amt)),
         m_alloc(&alloc),
@@ -41,18 +41,18 @@ public:
   }
 
   explicit HashSet(std::initializer_list<K> init, size_t bucket_amt = 64,
-                   MemAllocator& alloc = heap_alloc)
+                   MemAllocator& alloc = heap_alloc) noexcept
       : HashSet(init.size(), 1, bucket_amt, alloc) {
     for (const K& key : init) insert(key);
   }
 
   explicit HashSet(std::initializer_list<K> init, size_t slab_size, size_t slabs = 4,
-                   size_t bucket_amt = 64, MemAllocator& alloc = heap_alloc)
+                   size_t bucket_amt = 64, MemAllocator& alloc = heap_alloc) noexcept
       : HashSet(slab_size, slabs, bucket_amt, alloc) {
     for (const K& key : init) insert(key);
   }
 
-  ~HashSet() {
+  ~HashSet() noexcept {
     clear();
 
     if (m_alloc->canAlwaysFree()) {
@@ -64,7 +64,7 @@ public:
     }
   }
 
-  HashSet(const HashSet& o)
+  HashSet(const HashSet& o) noexcept
       : len(0),
         cap(0),
         slab_bytes(o.slab_bytes),
@@ -90,7 +90,7 @@ public:
     }
   }
 
-  HashSet& operator=(const HashSet& o) {
+  HashSet& operator=(const HashSet& o) noexcept {
     if (this == &o) return *this;
     HashSet tmp(o);
     *this = std::move(tmp);
@@ -144,14 +144,14 @@ public:
   }
 
   // union
-  HashSet operator|(const HashSet& other) const {
+  HashSet operator|(const HashSet& other) const noexcept {
     HashSet result(*this);
     for (auto& key : other) result.insert(key);
     return result;
   }
 
   // intersection
-  HashSet operator&(const HashSet& other) const {
+  HashSet operator&(const HashSet& other) const noexcept {
     HashSet result(slab_size, m_slabs.cap, bucket_amt, *m_alloc);
 
     for (auto& key : *this)
@@ -160,7 +160,7 @@ public:
     return result;
   }
 
-  bool contains(const K& key) const {
+  bool contains(const K& key) const noexcept {
     const size_t raw = m_hash(key);
     const size_t h = m_mixHash(raw);
     const size_t i = h & (bucket_amt - 1);
@@ -173,7 +173,7 @@ public:
     return false;
   }
 
-  void insert(const K& key) {
+  void insert(const K& key) noexcept {
     if (len * 4 > bucket_amt * 3) rehash(bucket_amt * 2);
 
     const size_t raw = m_hash(key);
@@ -192,7 +192,7 @@ public:
     ++len;
   }
 
-  void insert(K&& key) {
+  void insert(K&& key) noexcept {
     if (len * 4 > bucket_amt * 3) rehash(bucket_amt * 2);
 
     const size_t raw = m_hash(key);
@@ -211,7 +211,7 @@ public:
     ++len;
   }
 
-  bool erase(const K& key) {
+  bool erase(const K& key) noexcept {
     const size_t raw = m_hash(key);
     const size_t h = m_mixHash(raw);
     const size_t i = h & (bucket_amt - 1);
@@ -237,7 +237,7 @@ public:
     return false;
   }
 
-  void clear() {
+  void clear() noexcept {
     for (size_t i = 0; i < bucket_amt; ++i) {
       m_Node* n = m_buckets[i];
       m_buckets[i] = nullptr;
@@ -251,7 +251,7 @@ public:
     len = 0;
   }
 
-  void rehash(size_t new_cap) {
+  void rehash(size_t new_cap) noexcept {
     new_cap = m_nextPow2(new_cap);
     const size_t old_cap = bucket_amt;
 
@@ -279,93 +279,91 @@ public:
   }
 
 public:
-  class Iterator {
-  public:
+  struct Iterator {
     using Self = HashSet<K, Hash, KeyEq>;
 
     Self* set;
     size_t bucket;
     m_Node* node;
 
-    Iterator(Self* s, size_t b, m_Node* n)
+    Iterator(Self* s, size_t b, m_Node* n) noexcept
         : set(s),
           bucket(b),
           node(n) {}
 
-    K& operator*() const {
+    K& operator*() const noexcept {
       return node->key;
     }
-    m_Node* operator->() const {
+    m_Node* operator->() const noexcept {
       return node;
     }
 
-    Iterator& operator++() {
+    Iterator& operator++() noexcept {
       if (node) node = node->next;
       while (!node && ++bucket < set->bucket_amt) node = set->m_buckets[bucket];
       return *this;
     }
 
-    bool operator==(const Iterator& other) const {
+    bool operator==(const Iterator& other) const noexcept {
       return node == other.node && bucket == other.bucket;
     }
 
-    bool operator!=(const Iterator& other) const {
+    bool operator!=(const Iterator& other) const noexcept {
       return !(*this == other);
     }
   };
 
-  class ConstIterator {
-  public:
+  struct ConstIterator {
     using Self = HashSet<K, Hash, KeyEq>;
 
     const Self* set;
     size_t bucket;
     const m_Node* node;
 
-    ConstIterator(const Self* s, size_t b, const m_Node* n)
+    ConstIterator(const Self* s, size_t b, const m_Node* n) noexcept
         : set(s),
           bucket(b),
           node(n) {}
 
-    const K& operator*() const {
+    const K& operator*() const noexcept {
       return node->key;
     }
-    const m_Node* operator->() const {
+    const m_Node* operator->() const noexcept {
       return node;
     }
 
-    ConstIterator& operator++() {
+    ConstIterator& operator++() noexcept {
       if (node) node = node->next;
       while (!node && ++bucket < set->bucket_amt) node = set->m_buckets[bucket];
       return *this;
     }
 
-    bool operator==(const ConstIterator& other) const {
+    bool operator==(const ConstIterator& other) const noexcept {
       return node == other.node && bucket == other.bucket;
     }
 
-    bool operator!=(const ConstIterator& other) const {
+    bool operator!=(const ConstIterator& other) const noexcept {
       return !(*this == other);
     }
   };
 
-  Iterator begin() {
+  Iterator begin() noexcept {
     for (size_t i = 0; i < bucket_amt; ++i)
       if (m_buckets[i]) return Iterator(this, i, m_buckets[i]);
     return end();
   }
 
-  Iterator end() {
+  Iterator end() noexcept {
     return Iterator(this, bucket_amt, nullptr);
   }
 
-  ConstIterator begin() const {
+  ConstIterator begin() const noexcept {
     for (size_t i = 0; i < bucket_amt; ++i)
       if (m_buckets[i]) return ConstIterator(this, i, m_buckets[i]);
     return end();
   }
 
-  ConstIterator end() const {
+  ConstIterator end() const noexcept {
     return ConstIterator(this, bucket_amt, nullptr);
   }
 
@@ -375,18 +373,18 @@ private:
     K key;
     m_Node* next;
 
-    m_Node(size_t h, const K& k)
+    m_Node(size_t h, const K& k) noexcept
         : hash(h),
           key(k),
           next(nullptr) {}
 
-    m_Node(size_t h, K&& k)
+    m_Node(size_t h, K&& k) noexcept
         : hash(h),
           key(std::move(k)),
           next(nullptr) {}
   };
 
-  m_Node* m_allocNode(size_t h, const K& key) {
+  m_Node* m_allocNode(size_t h, const K& key) noexcept {
     if (!m_free) m_allocSlab();
 
     m_Node* n = m_free;
@@ -396,7 +394,7 @@ private:
     return n;
   }
 
-  m_Node* m_allocNode(size_t h, K&& key) {
+  m_Node* m_allocNode(size_t h, K&& key) noexcept {
     if (!m_free) m_allocSlab();
 
     m_Node* n = m_free;
@@ -406,12 +404,12 @@ private:
     return n;
   }
 
-  void m_freeNode(m_Node* n) {
+  void m_freeNode(m_Node* n) noexcept {
     n->next = m_free;
     m_free = n;
   }
 
-  void m_allocSlab() {
+  void m_allocSlab() noexcept {
     const size_t node_size = sizeof(m_Node);
 
     size_t nodes;
@@ -447,7 +445,7 @@ private:
     }
   }
 
-  static size_t m_nextPow2(size_t x) {
+  static size_t m_nextPow2(size_t x) noexcept {
     if (x <= 1) return 1;
     --x;
     x |= x >> 1;
@@ -459,7 +457,7 @@ private:
     return x + 1;
   }
 
-  static size_t m_mixHash(size_t h) {
+  static size_t m_mixHash(size_t h) noexcept {
     h ^= h >> 33;
     h *= 0xff51afd7ed558ccdULL;
     h ^= h >> 33;
