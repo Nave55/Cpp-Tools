@@ -20,7 +20,6 @@ private:
   m_Node* m_free = nullptr;
   MemAllocator* m_alloc;
   m_Node** m_buckets;
-  bool m_can_free;
   Vector<void*> m_slabs;
 
 public:
@@ -31,7 +30,6 @@ public:
         m_alloc(&alloc),
         m_buckets(static_cast<m_Node**>(
             alloc.memAllocate(sizeof(m_Node*) * this->bucket_amt, alignof(m_Node*)))),
-        m_can_free(alloc.getType() == AllocType::Pool || alloc.getType() == AllocType::Heap),
         m_slabs(0, slabs, alloc) {
     if (!m_buckets) panic("HashSet: bucket allocation failed");
     for (size_t i = 0; i < this->bucket_amt; ++i) m_buckets[i] = nullptr;
@@ -57,7 +55,7 @@ public:
   ~HashSet() {
     clear();
 
-    if (m_can_free) {
+    if (m_alloc->canAlwaysFree()) {
       m_alloc->memFree(m_buckets);
       for (size_t i = 0; i < m_slabs.len; ++i) {
         auto val = m_slabs.at(i);
@@ -78,11 +76,9 @@ public:
         m_alloc(o.m_alloc),
         m_buckets(static_cast<m_Node**>(
             m_alloc->memAllocate(sizeof(m_Node*) * bucket_amt, alignof(m_Node*)))),
-        m_can_free(o.m_can_free),
         m_slabs(0, o.m_slabs.cap, *m_alloc) {
     if (!m_buckets) panic("HashSet copy: bucket allocation failed");
     for (size_t i = 0; i < bucket_amt; ++i) m_buckets[i] = nullptr;
-
     for (size_t i = 0; i < o.m_slabs.len; ++i) m_allocSlab();
 
     for (size_t i = 0; i < o.bucket_amt; ++i) {
@@ -112,7 +108,6 @@ public:
         m_free(o.m_free),
         m_alloc(o.m_alloc),
         m_buckets(o.m_buckets),
-        m_can_free(o.m_can_free),
         m_slabs(std::move(o.m_slabs)) {
     o.len = 0;
     o.cap = 0;
@@ -123,7 +118,6 @@ public:
     o.m_free = nullptr;
     o.m_alloc = nullptr;
     o.m_buckets = nullptr;
-    o.m_can_free = false;
   }
 
   HashSet& operator=(HashSet&& o) noexcept {
@@ -278,7 +272,7 @@ public:
       }
     }
 
-    if (m_can_free) m_alloc->memFree(m_buckets);
+    if (m_alloc->canAlwaysFree()) m_alloc->memFree(m_buckets);
 
     m_buckets = new_buckets;
     bucket_amt = new_cap;
