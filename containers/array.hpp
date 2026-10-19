@@ -9,7 +9,6 @@
 template <typename T, size_t N>
 struct Array {
   T arr[N] = {};
-  size_t len = 0;
 
   constexpr explicit Array() = default;
 
@@ -19,41 +18,34 @@ struct Array {
     for (size_t i = 0; i < count; ++i) {
       arr[i] = *it++;
     }
-    len = count;
   }
 
-  constexpr Array(const Array& other)
-      : len(other.len) {
-    for (size_t i = 0; i < other.len; ++i) {
+  constexpr Array(const Array& other) {
+    for (size_t i = 0; i < N; ++i) {
       arr[i] = other.arr[i];
     }
   }
 
-  constexpr Array(Array&& other) noexcept
-      : len(other.len) {
-    for (size_t i = 0; i < other.len; ++i) {
+  constexpr Array(Array&& other) noexcept {
+    for (size_t i = 0; i < N; ++i) {
       arr[i] = std::move(other.arr[i]);
     }
-    other.len = 0;
   }
 
   constexpr Array& operator=(const Array& other) {
     if (this != &other) {
-      for (size_t i = 0; i < other.len; ++i) {
+      for (size_t i = 0; i < N; ++i) {
         arr[i] = other.arr[i];
       }
-      len = other.len;
     }
     return *this;
   }
 
   constexpr Array& operator=(Array&& other) noexcept {
     if (this != &other) {
-      for (size_t i = 0; i < other.len; ++i) {
+      for (size_t i = 0; i < N; ++i) {
         arr[i] = std::move(other.arr[i]);
       }
-      len = other.len;
-      other.len = 0;
     }
     return *this;
   }
@@ -69,13 +61,17 @@ struct Array {
   }
 
   constexpr std::optional<T&> at(size_t i) noexcept {
-    if (i >= len) return std::nullopt;
+    if (i >= N) return std::nullopt;
     return arr[i];
   }
 
   constexpr std::optional<const T&> at(size_t i) const noexcept {
-    if (i >= len) return std::nullopt;
+    if (i >= N) return std::nullopt;
     return arr[i];
+  }
+
+  constexpr size_t size() const noexcept {
+    return N;
   }
 
   constexpr T* begin() noexcept {
@@ -88,22 +84,22 @@ struct Array {
 
   constexpr std::span<T> slice(size_t start, size_t end) noexcept {
     if (start >= end) return {};
-    size_t actual_end = std::min(len, end);
+    size_t actual_end = std::min(N, end);
     return std::span<T>(begin() + start, begin() + actual_end);
   }
 
   constexpr std::span<const T> slice(size_t start, size_t end) const noexcept {
     if (start >= end) return {};
-    size_t actual_end = std::min(len, end);
+    size_t actual_end = std::min(N, end);
     return std::span<const T>(begin() + start, begin() + actual_end);
   }
 
   constexpr std::span<T> toSpan() noexcept {
-    return std::span<T>(&arr[0], len);
+    return std::span<T>(&arr[0], N);
   }
 
   constexpr std::span<const T> toSpan() const noexcept {
-    return std::span<const T>(&arr[0], len);
+    return std::span<const T>(&arr[0], N);
   }
 
   const char* type() const noexcept {
@@ -113,7 +109,7 @@ struct Array {
   template <typename PrintFn>
   void print(PrintFn printFn) const noexcept {
     std::printf("[");
-    for (size_t i = 0; i < len; ++i) {
+    for (size_t i = 0; i < N; ++i) {
       if (i > 0) std::printf(", ");
       printFn(arr[i]);
     }
@@ -122,18 +118,18 @@ struct Array {
 
   void printInfo() const noexcept {
     std::printf("length: ");
-    std::printf("%zu", len);
+    std::printf("%zu", N);
     std::printf(", type: ");
     printf("%s", type());
     std::printf("\n");
   }
 
   constexpr T* end() noexcept {
-    return &arr[len];
+    return &arr[N];
   }
 
   constexpr const T* end() const noexcept {
-    return &arr[len];
+    return &arr[N];
   }
 
   constexpr T first() const noexcept {
@@ -141,7 +137,7 @@ struct Array {
   }
 
   constexpr T last() const noexcept {
-    return arr[len - 1];
+    return arr[N - 1];
   }
 
   constexpr void clear() noexcept {
@@ -153,7 +149,7 @@ struct Array {
   }
 
   constexpr void reverse() noexcept {
-    for (size_t i = 0; i < len / 2; ++i) std::swap(arr[i], arr[len - 1 - i]);
+    for (size_t i = 0; i < N / 2; ++i) std::swap(arr[i], arr[N - 1 - i]);
   }
 
   constexpr void sort() noexcept {
@@ -170,14 +166,14 @@ struct Array {
   }
 
   constexpr std::optional<int> linearSearch(T x) const noexcept {
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < N; i++) {
       if (arr[i] == x) return static_cast<int>(i);
     }
     return std::nullopt;
   }
 
   constexpr std::optional<int> binarySearch(T x) const noexcept {
-    int high = static_cast<int>(len) - 1;
+    int high = static_cast<int>(N) - 1;
     int low = 0;
 
     while (low <= high) {
@@ -194,61 +190,61 @@ struct Array {
   }
 
   constexpr void orderedRemove(size_t ind) noexcept {
-    if (ind >= len) return;
-    for (size_t i = ind; i + 1 < len; ++i) {
+    if (ind >= N) return;
+    for (size_t i = ind; i + 1 < N; ++i) {
       arr[i] = std::move(arr[i + 1]);
       arr[i + 1] = T();
     }
   }
 
   constexpr void unorderedRemove(size_t ind) noexcept {
-    if (ind >= len) return;
-    arr[ind] = std::move(arr[len - 1]);
-    arr[len - 1] = T();
+    if (ind >= N) return;
+    arr[ind] = std::move(arr[N - 1]);
+    arr[N - 1] = T();
   }
 
   constexpr void deleteVal(T val) noexcept {
-    for (int i = static_cast<int>(len) - 1; i >= 0; --i) {
+    for (int i = static_cast<int>(N) - 1; i >= 0; --i) {
       if (arr[i] == val) orderedRemove(static_cast<size_t>(i));
     }
   }
 
   constexpr void deleteValUnordered(T val) noexcept {
-    for (int i = static_cast<int>(len) - 1; i >= 0; --i) {
+    for (int i = static_cast<int>(N) - 1; i >= 0; --i) {
       if (arr[i] == val) unorderedRemove(static_cast<size_t>(i));
     }
   }
 
   template <typename Fn>
   constexpr void mapIter(Fn fn) noexcept {
-    for (size_t i = 0; i < len; ++i) fn(arr[i]);
+    for (size_t i = 0; i < N; ++i) fn(arr[i]);
   }
 
   template <typename Rtype>
     requires std::is_arithmetic_v<Rtype> && std::is_arithmetic_v<T>
   constexpr std::optional<Rtype> sum() const noexcept {
-    if (len == 0) return std::nullopt;
-    if (len == 1) return static_cast<Rtype>(arr[0]);
+    if (N == 0) return std::nullopt;
+    if (N == 1) return static_cast<Rtype>(arr[0]);
     Rtype ttl = 0;
-    for (size_t i = 0; i < len; ++i) ttl += static_cast<Rtype>(arr[i]);
+    for (size_t i = 0; i < N; ++i) ttl += static_cast<Rtype>(arr[i]);
     return ttl;
   }
 
   template <typename Rtype>
     requires std::is_arithmetic_v<Rtype> && std::is_arithmetic_v<T>
   constexpr std::optional<Rtype> prod() const noexcept {
-    if (len == 0) return std::nullopt;
-    if (len == 1) return static_cast<Rtype>(arr[0]);
+    if (N == 0) return std::nullopt;
+    if (N == 1) return static_cast<Rtype>(arr[0]);
     Rtype ttl = 1;
-    for (size_t i = 0; i < len; ++i) ttl *= static_cast<Rtype>(arr[i]);
+    for (size_t i = 0; i < N; ++i) ttl *= static_cast<Rtype>(arr[i]);
     return ttl;
   }
 
   template <typename Rtype, typename Fn>
   constexpr std::optional<Rtype> foldl(size_t init, Fn fn) const noexcept {
-    if (len == 0) return std::nullopt;
+    if (N == 0) return std::nullopt;
     Rtype ttl = static_cast<Rtype>(init);
-    for (size_t i = 0; i < len; ++i) {
+    for (size_t i = 0; i < N; ++i) {
       fn(ttl, static_cast<Rtype>(arr[i]));
     }
     return ttl;
@@ -256,10 +252,10 @@ struct Array {
 
   template <typename Rtype, typename Fn>
   constexpr std::optional<Rtype> reduce(Fn fn) const noexcept {
-    if (len == 0) return std::nullopt;
-    if (len == 1) return static_cast<Rtype>(arr[0]);
+    if (N == 0) return std::nullopt;
+    if (N == 1) return static_cast<Rtype>(arr[0]);
     Rtype ttl = static_cast<Rtype>(arr[0]);
-    for (size_t i = 1; i < len; ++i) {
+    for (size_t i = 1; i < N; ++i) {
       fn(ttl, static_cast<Rtype>(arr[i]));
     }
     return ttl;
