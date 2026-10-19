@@ -17,7 +17,7 @@ public:
   T* ptr = nullptr;
 
 public:
-  explicit Vector(MemAllocator& alloc = heap_alloc)
+  explicit Vector(MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{0},
         cap{8},
@@ -27,7 +27,7 @@ public:
     }
   }
 
-  explicit Vector(size_t cap, MemAllocator& alloc = heap_alloc)
+  explicit Vector(size_t cap, MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{0},
         cap{cap},
@@ -36,7 +36,7 @@ public:
       panic("Initial Vec capacity does not fit in a pool chunk");
   }
 
-  explicit Vector(size_t sz, size_t cap, MemAllocator& alloc = heap_alloc)
+  explicit Vector(size_t sz, size_t cap, MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{sz},
         cap{cap},
@@ -47,7 +47,7 @@ public:
     for (size_t i = 0; i < sz; ++i) new (&ptr[i]) T();
   }
 
-  explicit Vector(std::initializer_list<T> lst, MemAllocator& alloc = heap_alloc)
+  explicit Vector(std::initializer_list<T> lst, MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{lst.size()},
         cap{lst.size()},
@@ -58,7 +58,8 @@ public:
     std::copy(lst.begin(), lst.end(), ptr);
   }
 
-  explicit Vector(std::initializer_list<T> lst, size_t cap, MemAllocator& alloc = heap_alloc)
+  explicit Vector(std::initializer_list<T> lst, size_t cap,
+                  MemAllocator& alloc = heap_alloc) noexcept
       : m_alloc{&alloc},
         len{lst.size()},
         cap{std::max(cap, lst.size())},
@@ -70,11 +71,11 @@ public:
     std::copy(lst.begin(), lst.end(), ptr);
   }
 
-  ~Vector() {
+  ~Vector() noexcept {
     if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
   }
 
-  Vector(const Vector& vec)
+  Vector(const Vector& vec) noexcept
       : m_alloc{vec.m_alloc},
         len{vec.len},
         cap{vec.cap},
@@ -82,7 +83,7 @@ public:
     std::copy(vec.ptr, vec.ptr + vec.len, ptr);
   }
 
-  Vector(Vector&& vec)
+  Vector(Vector&& vec) noexcept
       : m_alloc{vec.m_alloc},
         len{vec.len},
         cap{vec.cap},
@@ -92,7 +93,7 @@ public:
     vec.cap = 0;
   }
 
-  Vector& operator=(const Vector& other) {
+  Vector& operator=(const Vector& other) noexcept {
     if (this == &other) return *this;
 
     if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
@@ -381,7 +382,7 @@ public:
   }
 
 private:
-  void m_resizeCapacity(size_t new_cap) {
+  void m_resizeCapacity(size_t new_cap) noexcept {
     size_t old_bytes = cap * sizeof(T);
     size_t new_bytes = new_cap * sizeof(T);
 
