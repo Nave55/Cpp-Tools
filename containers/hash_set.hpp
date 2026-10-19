@@ -24,8 +24,8 @@ private:
   Vector<void*> m_slabs;
 
 public:
-  explicit HashSet(MemAllocator& alloc, size_t slab_size = 32, size_t slabs = 4,
-                   size_t bucket_amt = 64)
+  explicit HashSet(size_t slab_size = 32, size_t slabs = 4, size_t bucket_amt = 64,
+                   MemAllocator& alloc = heap_alloc)
       : slab_size(slab_size),
         bucket_amt(m_nextPow2(bucket_amt)),
         m_alloc(&alloc),
@@ -42,15 +42,15 @@ public:
     slab_bytes = slab_size * sizeof(m_Node);
   }
 
-  explicit HashSet(std::initializer_list<K> init, MemAllocator& alloc = arena_alloc,
-                   size_t bucket_amt = 64)
-      : HashSet(alloc, init.size(), 1, bucket_amt) {
+  explicit HashSet(std::initializer_list<K> init, size_t bucket_amt = 64,
+                   MemAllocator& alloc = heap_alloc)
+      : HashSet(init.size(), 1, bucket_amt, alloc) {
     for (const K& key : init) insert(key);
   }
 
-  explicit HashSet(std::initializer_list<K> init, MemAllocator& alloc, size_t slab_size,
-                   size_t slabs = 4, size_t bucket_amt = 64)
-      : HashSet(alloc, slab_size, slabs, bucket_amt) {
+  explicit HashSet(std::initializer_list<K> init, size_t slab_size, size_t slabs = 4,
+                   size_t bucket_amt = 64, MemAllocator& alloc = heap_alloc)
+      : HashSet(slab_size, slabs, bucket_amt, alloc) {
     for (const K& key : init) insert(key);
   }
 
@@ -142,7 +142,7 @@ public:
 
   // intersection
   HashSet operator&(const HashSet& other) const {
-    HashSet result(m_alloc ? *m_alloc : arena_alloc, slab_size, m_slabs.cap, bucket_amt);
+    HashSet result(slab_size, m_slabs.cap, bucket_amt, *m_alloc);
 
     for (auto& key : *this)
       if (other.contains(key)) result.insert(key);
@@ -268,7 +268,7 @@ public:
   }
 
   HashSet intersectionWith(const HashSet& other) const {
-    HashSet result(m_alloc ? *m_alloc : arena_alloc, slab_size, m_slabs.cap, bucket_amt);
+    HashSet result(m_alloc ? *m_alloc : heap_alloc, slab_size, m_slabs.cap, bucket_amt);
 
     for (auto& key : *this) {
       if (other.contains(key)) result.insert(key);
