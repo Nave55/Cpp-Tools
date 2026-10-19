@@ -1,12 +1,14 @@
 #pragma once
 
+#include <optional>
+#include "pair.hpp"
 #include "vector.hpp"
 
 template <typename K, typename V, typename Hash = std::hash<K>, typename KeyEq = std::equal_to<K>>
 class HashMap {
 public:
-  class Iterator;
-  class ConstIterator;
+  struct Iterator;
+  struct ConstIterator;
   size_t len = 0;         // amount of entries in hashmap
   size_t cap = 0;         // total node capacity
   size_t slab_bytes = 0;  // bytes per slab
@@ -24,7 +26,7 @@ private:
 
 public:
   explicit HashMap(size_t slab_size = 32, size_t slabs = 4, size_t bucket_amt = 64,
-                   MemAllocator& alloc = heap_alloc)
+                   MemAllocator& alloc = heap_alloc) noexcept
       : slab_size(slab_size),
         bucket_amt(m_nextPow2(bucket_amt)),
         m_alloc(&alloc),
@@ -40,21 +42,21 @@ public:
     slab_bytes = slab_size * sizeof(m_Node);
   }
 
-  explicit HashMap(std::initializer_list<std::pair<K, V>> init, size_t bucket_amt = 64,
-                   MemAllocator& alloc = heap_alloc)
+  explicit HashMap(std::initializer_list<Pair<K, V>> init, size_t bucket_amt = 64,
+                   MemAllocator& alloc = heap_alloc) noexcept
       : HashMap(init.size(), 1, bucket_amt, alloc) {
     for (auto& [k, v] : init) insert(k, v);
     slab_bytes = slab_size * sizeof(m_Node);
   }
 
-  explicit HashMap(std::initializer_list<std::pair<K, V>> init, size_t slab_size, size_t slabs = 4,
-                   size_t bucket_amt = 64, MemAllocator& alloc = heap_alloc)
+  explicit HashMap(std::initializer_list<Pair<K, V>> init, size_t slab_size, size_t slabs = 4,
+                   size_t bucket_amt = 64, MemAllocator& alloc = heap_alloc) noexcept
       : HashMap(slab_size, slabs, bucket_amt, alloc) {
     for (auto& [k, v] : init) insert(k, v);
     slab_bytes = slab_size * sizeof(m_Node);
   }
 
-  ~HashMap() {
+  ~HashMap() noexcept {
     clear();
 
     if (m_alloc->canAlwaysFree()) {
@@ -66,7 +68,7 @@ public:
     }
   }
 
-  HashMap(const HashMap& o)
+  HashMap(const HashMap& o) noexcept
       : len(0),
         cap(0),
         slab_bytes(o.slab_bytes),
@@ -93,7 +95,7 @@ public:
     }
   }
 
-  HashMap& operator=(const HashMap& o) {
+  HashMap& operator=(const HashMap& o) noexcept {
     if (this == &o) return *this;
     HashMap tmp(o);
     *this = std::move(tmp);
@@ -129,32 +131,44 @@ public:
     return *this;
   }
 
-  template <typename PrintFn>
-  void print(PrintFn printFn) const noexcept {
+  template <typename PrintKey, typename PrintVal>
+  void print(PrintKey printKey, PrintVal printVal) const noexcept {
     std::printf("HashMap {\n");
     for (auto&& [k, v] : *this) {
       std::printf("  ");
-      printFn(k);
+      printKey(k);
       std::printf(" => ");
-      printFn(v);
+      printVal(v);
       std::printf("\n");
     }
     std::printf("}\n");
   }
 
-  size_t remaining_capacity() const {
+  size_t remaining_capacity() const noexcept {
     return cap - len;
   }
 
-  V* operator[](const K& key) {
+  V* operator[](const K& key) noexcept {
     return find(key);
   }
 
-  const V* operator[](const K& key) const {
+  const V* operator[](const K& key) const noexcept {
     return find(key);
   }
 
-  V& atOrInsert(const K& key) {
+  std::optional<V&> at(const K& key) noexcept {
+    auto val = find(key);
+    if (!val) return std::nullopt;
+    return *val;
+  }
+
+  std::optional<const V&> at(const K& key) const noexcept {
+    auto val = find(key);
+    if (!val) return std::nullopt;
+    return *val;
+  }
+
+  V& atOrInsert(const K& key) noexcept {
     if (len * 4 > bucket_amt * 3) rehash(bucket_amt * 2);
 
     const size_t raw = m_hash(key);
@@ -178,7 +192,7 @@ public:
     return len;
   }
 
-  void insert(const K& key, const V& value) {
+  void insert(const K& key, const V& value) noexcept {
     if (len * 4 > bucket_amt * 3) rehash(bucket_amt * 2);
 
     const size_t raw = m_hash(key);
@@ -200,7 +214,7 @@ public:
     ++len;
   }
 
-  void insert(K&& key, V&& value) {
+  void insert(K&& key, V&& value) noexcept {
     if (len * 4 > bucket_amt * 3) rehash(bucket_amt * 2);
 
     const size_t raw = m_hash(key);
@@ -222,7 +236,7 @@ public:
     ++len;
   }
 
-  void insert(const K& key, V&& value) {
+  void insert(const K& key, V&& value) noexcept {
     if (len * 4 > bucket_amt * 3) rehash(bucket_amt * 2);
 
     const size_t raw = m_hash(key);
@@ -244,7 +258,7 @@ public:
     ++len;
   }
 
-  void insert(K&& key, const V& value) {
+  void insert(K&& key, const V& value) noexcept {
     if (len * 4 > bucket_amt * 3) rehash(bucket_amt * 2);
 
     const size_t raw = m_hash(key);
@@ -266,7 +280,7 @@ public:
     ++len;
   }
 
-  bool erase(const K& key) {
+  bool erase(const K& key) noexcept {
     const size_t raw = m_hash(key);
     const size_t h = m_mixHash(raw);
     const size_t i = h & (bucket_amt - 1);
@@ -292,7 +306,7 @@ public:
     return false;
   }
 
-  V* find(const K& key) {
+  V* find(const K& key) noexcept {
     const size_t raw = m_hash(key);
     const size_t h = m_mixHash(raw);
     const size_t i = h & (bucket_amt - 1);
@@ -305,7 +319,7 @@ public:
     return nullptr;
   }
 
-  const V* find(const K& key) const {
+  const V* find(const K& key) const noexcept {
     const size_t raw = m_hash(key);
     const size_t h = m_mixHash(raw);
     const size_t i = h & (bucket_amt - 1);
@@ -318,11 +332,11 @@ public:
     return nullptr;
   }
 
-  bool contains(const K& key) const {
+  bool contains(const K& key) const noexcept {
     return find(key) != nullptr;
   }
 
-  void clear() {
+  void clear() noexcept {
     for (size_t i = 0; i < bucket_amt; ++i) {
       m_Node* n = m_buckets[i];
       m_buckets[i] = nullptr;
@@ -336,7 +350,7 @@ public:
     len = 0;
   }
 
-  void rehash(size_t new_cap) {
+  void rehash(size_t new_cap) noexcept {
     new_cap = m_nextPow2(new_cap);
     const size_t old_cap = bucket_amt;
 
@@ -362,27 +376,25 @@ public:
     bucket_amt = new_cap;
   }
 
-  class Iterator {
-  public:
+  struct Iterator {
     HashMap* map;
     size_t bucket;
     m_Node* node;
 
-  public:
-    Iterator(HashMap* m, size_t b, m_Node* n)
+    Iterator(HashMap* m, size_t b, m_Node* n) noexcept
         : map(m),
           bucket(b),
           node(n) {}
 
-    auto operator*() const {
-      return std::pair<const K&, V&>(node->key, node->value);
+    auto operator*() const noexcept {
+      return Pair<const K&, V&>(node->key, node->value);
     }
 
-    m_Node* operator->() const {
+    m_Node* operator->() const noexcept {
       return node;
     }
 
-    Iterator& operator++() {
+    Iterator& operator++() noexcept {
       if (node) node = node->next;
       while (!node && ++bucket < map->bucket_amt) {
         node = map->m_buckets[bucket];
@@ -390,67 +402,65 @@ public:
       return *this;
     }
 
-    bool operator==(const Iterator& other) const {
+    bool operator==(const Iterator& other) const noexcept {
       return node == other.node && bucket == other.bucket;
     }
 
-    bool operator!=(const Iterator& other) const {
+    bool operator!=(const Iterator& other) const noexcept {
       return !(*this == other);
     }
   };
 
-  class ConstIterator {
-  public:
+  struct ConstIterator {
     const HashMap* map;
     size_t bucket;
     const m_Node* node;
 
-  public:
-    ConstIterator(const HashMap* m, size_t b, const m_Node* n)
+    ConstIterator(const HashMap* m, size_t b, const m_Node* n) noexcept
         : map(m),
           bucket(b),
           node(n) {}
 
-    auto operator*() const {
-      return std::pair<const K&, const V&>(node->key, node->value);
+    auto operator*() const noexcept {
+      return Pair<const K&, const V&>(node->key, node->value);
     }
 
-    const m_Node* operator->() const {
+    const m_Node* operator->() const noexcept {
       return node;
     }
 
-    ConstIterator& operator++() {
+    ConstIterator& operator++() noexcept {
       if (node) node = node->next;
       while (!node && ++bucket < map->bucket_amt) node = map->m_buckets[bucket];
       return *this;
     }
 
-    bool operator==(const ConstIterator& other) const {
+    bool operator==(const ConstIterator& other) const noexcept {
       return node == other.node && bucket == other.bucket;
     }
 
-    bool operator!=(const ConstIterator& other) const {
+    bool operator!=(const ConstIterator& other) const noexcept {
       return !(*this == other);
     }
   };
 
-  Iterator begin() {
+  Iterator begin() noexcept {
     for (size_t i = 0; i < bucket_amt; ++i)
       if (m_buckets[i]) return Iterator(this, i, m_buckets[i]);
     return end();
   }
 
-  Iterator end() {
+  Iterator end() noexcept {
     return Iterator(this, bucket_amt, nullptr);
   }
 
-  ConstIterator begin() const {
+  ConstIterator begin() const noexcept {
     for (size_t i = 0; i < bucket_amt; ++i)
       if (m_buckets[i]) return ConstIterator(this, i, m_buckets[i]);
     return end();
   }
 
-  ConstIterator end() const {
+  ConstIterator end() const noexcept {
     return ConstIterator(this, bucket_amt, nullptr);
   }
 
@@ -461,19 +471,20 @@ private:
     V value;
     m_Node* next;
 
-    m_Node(size_t h, const K& k, const V& v)
+    m_Node(size_t h, const K& k, const V& v) noexcept
         : hash(h),
           key(k),
           value(v),
           next(nullptr) {}
 
-    m_Node(size_t h, K&& k, V&& v)
+    m_Node(size_t h, K&& k, V&& v) noexcept
         : hash(h),
           key(std::move(k)),
           value(std::move(v)),
           next(nullptr) {}
   };
-  static size_t m_nextPow2(size_t x) {
+
+  static size_t m_nextPow2(size_t x) noexcept {
     if (x == 0) return 1;
     --x;
     x |= x >> 1;
@@ -485,7 +496,7 @@ private:
     return x + 1;
   }
 
-  static size_t m_mixHash(size_t h) {
+  static size_t m_mixHash(size_t h) noexcept {
     h ^= h >> 33;
     h *= 0xff51afd7ed558ccdULL;
     h ^= h >> 33;
@@ -494,7 +505,7 @@ private:
     return h;
   }
 
-  m_Node* m_allocNode(size_t h, const K& key, const V& value) {
+  m_Node* m_allocNode(size_t h, const K& key, const V& value) noexcept {
     if (!m_free) m_allocSlab();
 
     m_Node* n = m_free;
@@ -504,7 +515,7 @@ private:
     return n;
   }
 
-  m_Node* m_allocNode(size_t h, K&& key, V&& value) {
+  m_Node* m_allocNode(size_t h, K&& key, V&& value) noexcept {
     if (!m_free) m_allocSlab();
 
     m_Node* n = m_free;
@@ -514,7 +525,7 @@ private:
     return n;
   }
 
-  m_Node* m_allocNode(size_t h, const K& key, V&& value) {
+  m_Node* m_allocNode(size_t h, const K& key, V&& value) noexcept {
     if (!m_free) m_allocSlab();
 
     m_Node* n = m_free;
@@ -524,7 +535,7 @@ private:
     return n;
   }
 
-  m_Node* m_allocNode(size_t h, K&& key, const V& value) {
+  m_Node* m_allocNode(size_t h, K&& key, const V& value) noexcept {
     if (!m_free) m_allocSlab();
 
     m_Node* n = m_free;
@@ -540,7 +551,7 @@ private:
     m_free = n;
   }
 
-  void m_allocSlab() {
+  void m_allocSlab() noexcept {
     const size_t node_size = sizeof(m_Node);
 
     size_t nodes;
