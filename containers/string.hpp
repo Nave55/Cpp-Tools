@@ -21,10 +21,9 @@ public:
       : m_alloc{&alloc},
         len{0},
         cap{cap},
-        ptr{static_cast<char*>(
-            m_alloc->allocate(sizeof(char) * cap, alignof(char)))} {
+        ptr{static_cast<char*>(m_alloc->memAllocate(sizeof(char) * cap, alignof(char)))} {
     if (sizeof(char) * cap > m_alloc->getChunkSize()) {
-      panic("Initial String capacity does not fit in a pool chunk");
+      panic("Initial String capacity does not fit in allocated chunk");
     }
     ptr[0] = '\0';
   }
@@ -34,37 +33,33 @@ public:
       : m_alloc{&alloc},
         len{std::strlen(str)},
         cap{len + 1},
-        ptr{static_cast<char*>(
-            m_alloc->allocate(sizeof(char) * cap, alignof(char)))} {
+        ptr{static_cast<char*>(m_alloc->memAllocate(sizeof(char) * cap, alignof(char)))} {
     if (sizeof(char) * cap > m_alloc->getChunkSize())
-      panic("Initial String capacity does not fit in a pool chunk");
+      panic("Initial String capacity does not fit in allocated chunk");
 
     std::memcpy(ptr, str, len + 1);  // includes '\0'
   }
 
   // from C-string
-  explicit String(const char* str, size_t cap,
-                  MemAllocator& alloc = arena_alloc)
+  explicit String(const char* str, size_t cap, MemAllocator& alloc = arena_alloc)
       : m_alloc{&alloc},
         len{std::strlen(str)} {
-    if (cap < len + 1)
-      panic("String(cap): capacity too small for input string");
+    if (cap < len + 1) panic("String(cap): capacity too small for input string");
 
     this->cap = cap;
 
-    ptr = static_cast<char*>(
-        m_alloc->allocate(sizeof(char) * cap, alignof(char)));
+    ptr = static_cast<char*>(m_alloc->memAllocate(sizeof(char) * cap, alignof(char)));
 
     if (!ptr) panic("String(cap): allocation failed");
 
     if (sizeof(char) * cap > m_alloc->getChunkSize())
-      panic("Initial String capacity does not fit in a pool chunk");
+      panic("Initial String capacity does not fit in allocated chunk");
 
     std::memcpy(ptr, str, len + 1);  // includes '\0'
   }
   ~String() {
-    if (ptr && m_alloc->getType() == AllocType::Pool) {
-      m_alloc->free(ptr);
+    if (m_alloc->getType() == AllocType::Pool || m_alloc->getType() == AllocType::Heap) {
+      m_alloc->memFree(ptr);
     }
   }
 
@@ -72,8 +67,7 @@ public:
       : m_alloc{str.m_alloc},
         len{str.len},
         cap{str.cap},
-        ptr{static_cast<char*>(
-            m_alloc->allocate(sizeof(char) * str.cap, alignof(char)))} {
+        ptr{static_cast<char*>(m_alloc->memAllocate(sizeof(char) * str.cap, alignof(char)))} {
     std::memcpy(ptr, str.ptr, len + 1);  // copy including '\0'
   }
 
@@ -91,15 +85,14 @@ public:
     if (this == &other) return *this;
 
     if (m_alloc->getType() == AllocType::Pool && ptr) {
-      m_alloc->free(ptr);
+      m_alloc->memFree(ptr);
     }
 
     m_alloc = other.m_alloc;
     len = other.len;
     cap = other.cap;
 
-    ptr = static_cast<char*>(
-        m_alloc->allocate(sizeof(char) * cap, alignof(char)));
+    ptr = static_cast<char*>(m_alloc->memAllocate(sizeof(char) * cap, alignof(char)));
     if (!ptr) panic("String copy assignment: allocation failed");
 
     std::memcpy(ptr, other.ptr, len + 1);
@@ -111,7 +104,7 @@ public:
     if (this == &other) return *this;
 
     if (ptr && m_alloc && m_alloc->getType() == AllocType::Pool) {
-      m_alloc->free(ptr);
+      m_alloc->memFree(ptr);
     }
 
     m_alloc = other.m_alloc;
@@ -275,8 +268,7 @@ public:
   }
 
   void sortDescending() noexcept {
-    std::sort(begin(), end(),
-              [](const char& a, const char& b) { return a > b; });
+    std::sort(begin(), end(), [](const char& a, const char& b) { return a > b; });
   }
 
   template <typename F>
@@ -420,20 +412,20 @@ private:
     size_t new_bytes = new_cap * sizeof(char);
 
     if (m_alloc->supportsResize()) {
-      char* new_str = static_cast<char*>(
-          m_alloc->resize(ptr, old_bytes, new_bytes, alignof(char)));
+      char* new_str =
+          static_cast<char*>(m_alloc->memResize(ptr, old_bytes, new_bytes, alignof(char)));
       if (!new_str) panic("Allocator resize failed");
 
       ptr = new_str;
       cap = new_cap;
     } else {
-      char* new_str = static_cast<char*>(
-          m_alloc->allocate(sizeof(char) * new_cap, alignof(char)));
+      char* new_str =
+          static_cast<char*>(m_alloc->memAllocate(sizeof(char) * new_cap, alignof(char)));
       if (!new_str) panic("Allocator resize failed");
 
       std::memcpy(new_str, ptr, len + 1);  // include '\0'
 
-      m_alloc->free(ptr);
+      m_alloc->memFree(ptr);
       ptr = new_str;
       cap = new_cap;
     }
