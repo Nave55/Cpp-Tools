@@ -39,7 +39,7 @@ public:
     return ptr[i];
   }
 
-  constexpr size_t len() const noexcept {
+  constexpr size_t size() const noexcept {
     return N;
   }
 
@@ -72,16 +72,6 @@ public:
   }
 
   constexpr char last() const noexcept {
-    return ptr[N - 1];
-  }
-
-  std::optional<char> firstSafe() const noexcept {
-    if (N == 0) return std::nullopt;
-    return ptr[0];
-  }
-
-  std::optional<char> lastSafe() const noexcept {
-    if (N == 0) return std::nullopt;
     return ptr[N - 1];
   }
 
