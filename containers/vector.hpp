@@ -71,8 +71,7 @@ public:
   }
 
   ~Vector() {
-    if (m_alloc->getType() == AllocType::Pool || m_alloc->getType() == AllocType::Heap)
-      m_alloc->memFree(ptr);
+    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
   }
 
   Vector(const Vector& vec)
@@ -96,9 +95,7 @@ public:
   Vector& operator=(const Vector& other) {
     if (this == &other) return *this;
 
-    if (m_alloc->getType() == AllocType::Pool) {
-      if (ptr) m_alloc->memFree(ptr);
-    }
+    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
 
     m_alloc = other.m_alloc;
 
@@ -116,9 +113,7 @@ public:
   Vector& operator=(Vector&& other) noexcept {
     if (this == &other) return *this;
 
-    if (ptr && m_alloc && m_alloc->getType() == AllocType::Pool) {
-      m_alloc->memFree(ptr);
-    }
+    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
 
     m_alloc = other.m_alloc;
     ptr = other.ptr;
