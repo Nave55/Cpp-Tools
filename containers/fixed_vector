@@ -83,6 +83,10 @@ struct FixedVector {
     return arr[i];
   }
 
+  constexpr size_t size() const noexcept {
+    return len;
+  }
+
   T* begin() noexcept {
     return &arr[0];
   }
