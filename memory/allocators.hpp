@@ -667,7 +667,4 @@ public:
   }
 };
 
-extern Arena arena_alloc;
-extern Stack stack_alloc;
-extern Pool pool_alloc;
 extern Heap heap_alloc;
