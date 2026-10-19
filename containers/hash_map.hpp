@@ -22,8 +22,8 @@ private:
   m_Node* m_free = nullptr;  // free list head
   MemAllocator* m_alloc;     // custom allocator
   m_Node** m_buckets;
-  bool m_can_free;     // if allocator support freeing data
-  Vec<void*> m_slabs;  // raw slab pointers
+  bool m_can_free;        // if allocator support freeing data
+  Vector<void*> m_slabs;  // raw slab pointers
 
 public:
   explicit HashMap(MemAllocator& alloc = arena_alloc, size_t slab_size = 32,
@@ -221,6 +221,10 @@ public:
     m_buckets[i] = newNode;
     ++len;
     return newNode->value;
+  }
+
+  size_t size() const noexcept {
+    return len;
   }
 
   template <typename PrintFn>
