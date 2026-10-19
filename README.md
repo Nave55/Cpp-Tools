@@ -1,5 +1,7 @@
 # Cpp Tools
 
+## Uses C++ 26
+
 **Currently Contains:**
 
 - **Custom Allocators** - Arena, Pool, Stack, Heap
