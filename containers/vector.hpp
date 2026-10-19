@@ -17,7 +17,7 @@ public:
   T* ptr = nullptr;
 
 public:
-  explicit Vector(MemAllocator& alloc = arena_alloc)
+  explicit Vector(MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{0},
         cap{8},
@@ -27,7 +27,7 @@ public:
     }
   }
 
-  explicit Vector(size_t cap, MemAllocator& alloc = arena_alloc)
+  explicit Vector(size_t cap, MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{0},
         cap{cap},
@@ -36,7 +36,7 @@ public:
       panic("Initial Vec capacity does not fit in a pool chunk");
   }
 
-  explicit Vector(size_t sz, size_t cap, MemAllocator& alloc = arena_alloc)
+  explicit Vector(size_t sz, size_t cap, MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{sz},
         cap{cap},
@@ -47,7 +47,7 @@ public:
     for (size_t i = 0; i < sz; ++i) new (&ptr[i]) T();
   }
 
-  explicit Vector(std::initializer_list<T> lst, MemAllocator& alloc = arena_alloc)
+  explicit Vector(std::initializer_list<T> lst, MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{lst.size()},
         cap{lst.size()},
@@ -58,7 +58,7 @@ public:
     std::copy(lst.begin(), lst.end(), ptr);
   }
 
-  explicit Vector(std::initializer_list<T> lst, size_t cap, MemAllocator& alloc = arena_alloc)
+  explicit Vector(std::initializer_list<T> lst, size_t cap, MemAllocator& alloc = heap_alloc)
       : m_alloc{&alloc},
         len{lst.size()},
         cap{std::max(cap, lst.size())},
