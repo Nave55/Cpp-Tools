@@ -133,6 +133,22 @@ public:
     return *this;
   }
 
+  size_t size() const noexcept {
+    return len;
+  }
+
+  template <typename PrintFn>
+  void print(PrintFn printFn) const noexcept {
+    size_t id = 0;
+    std::printf("HashSet { ");
+    for (auto&& k : *this) {
+      printFn(k);
+      if (id < len - 1) std::printf(", ");
+      id++;
+    }
+    std::printf(" }\n");
+  }
+
   // union
   HashSet operator|(const HashSet& other) const {
     HashSet result(*this);
@@ -148,22 +164,6 @@ public:
       if (other.contains(key)) result.insert(key);
 
     return result;
-  }
-
-  size_t size() const noexcept {
-    return len;
-  }
-
-  template <typename PrintFn>
-  void print(PrintFn printFn) const noexcept {
-    size_t id = 0;
-    std::printf("HashSet { ");
-    for (auto&& k : *this) {
-      printFn(k);
-      if (id < len - 1) std::printf(", ");
-      id++;
-    }
-    std::printf(" }\n");
   }
 
   bool contains(const K& key) const {
@@ -255,26 +255,6 @@ public:
       }
     }
     len = 0;
-  }
-
-  HashSet unionWith(const HashSet& other) const {
-    HashSet result(*this);
-
-    for (auto& key : other) {
-      result.insert(key);
-    }
-
-    return result;
-  }
-
-  HashSet intersectionWith(const HashSet& other) const {
-    HashSet result(m_alloc ? *m_alloc : heap_alloc, slab_size, m_slabs.cap, bucket_amt);
-
-    for (auto& key : *this) {
-      if (other.contains(key)) result.insert(key);
-    }
-
-    return result;
   }
 
   void rehash(size_t new_cap) {
