@@ -57,10 +57,9 @@ public:
 
     std::memcpy(ptr, str, len + 1);  // includes '\0'
   }
+
   ~String() {
-    if (m_alloc->getType() == AllocType::Pool || m_alloc->getType() == AllocType::Heap) {
-      m_alloc->memFree(ptr);
-    }
+    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
   }
 
   String(const String& str)
