@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <functional>
 #include <optional>
 #include <string_view>
 #include "../memory/allocators.hpp"
@@ -128,14 +127,14 @@ public:
     return ptr[i];
   }
 
-  std::optional<std::reference_wrapper<char>> at(size_t i) noexcept {
+  std::optional<char&> at(size_t i) noexcept {
     if (i >= len) return std::nullopt;
-    return std::ref(ptr[i]);
+    return ptr[i];
   }
 
-  std::optional<std::reference_wrapper<const char>> at(size_t i) const noexcept {
+  std::optional<const char&> at(size_t i) const noexcept {
     if (i >= len) return std::nullopt;
-    return std::cref(ptr[i]);
+    return ptr[i];
   }
 
   String& operator+=(char c) noexcept {
