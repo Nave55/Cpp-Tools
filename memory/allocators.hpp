@@ -154,6 +154,11 @@ struct Heap final : public MemAllocator {
   AllocType getType() const noexcept override {
     return AllocType::Heap;
   }
+
+  void printMemUsage() const noexcept {
+    std::printf("Memory Allocated: %zu\n", ttl);
+    std::printf("Memory Not Freed: %zu\n", current_used);
+  }
 };
 
 // *******************************************************
