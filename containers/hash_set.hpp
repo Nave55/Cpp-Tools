@@ -22,7 +22,7 @@ private:
   MemAllocator* m_alloc;
   m_Node** m_buckets;
   bool m_can_free;
-  Vec<void*> m_slabs;
+  Vector<void*> m_slabs;
 
 public:
   explicit HashSet(MemAllocator& alloc = arena_alloc, size_t slab_size = 32,
@@ -195,6 +195,10 @@ public:
       if (other.contains(key)) result.insert(key);
 
     return result;
+  }
+
+  size_t size() const noexcept {
+    return len;
   }
 
   template <typename PrintFn>
