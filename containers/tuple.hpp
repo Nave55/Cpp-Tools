@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <utility>
 
 template <std::size_t I, typename T>
@@ -15,44 +14,52 @@ struct TupleLeaf {
 };
 
 template <std::size_t I, typename T, typename... Ts>
-struct NthType : NthType<I - 1, Ts...> {};
+struct NthType {
+  using Type = typename NthType<I - 1, Ts...>::Type;
+};
 
 template <typename T, typename... Ts>
 struct NthType<0, T, Ts...> {
-  using type = T;
+  using Type = T;
 };
 
 template <typename Seq, typename... Ts>
-struct TupleTmpl;
+struct TupleImpl;
 
 template <std::size_t... Is, typename... Ts>
-struct TupleTmpl<std::index_sequence<Is...>, Ts...> : TupleLeaf<Is, Ts>... {
-  constexpr TupleTmpl() = default;
-
+struct TupleImpl<std::index_sequence<Is...>, Ts...> : TupleLeaf<Is, Ts>... {
   template <typename... Us>
-  constexpr explicit TupleTmpl(Us&&... us)
+
+  constexpr explicit TupleImpl(Us&&... us)
       : TupleLeaf<Is, Ts>(std::forward<Us>(us))... {}
 };
 
 template <typename... Ts>
-struct Tuple : TupleTmpl<std::index_sequence_for<Ts...>, Ts...> {
-  using base = TupleTmpl<std::index_sequence_for<Ts...>, Ts...>;
+struct Tuple : TupleImpl<std::index_sequence_for<Ts...>, Ts...> {
+  using Base = TupleImpl<std::index_sequence_for<Ts...>, Ts...>;
+
+  template <size_t I>
+  using Nth_t = typename NthType<I, Ts...>::Type;
+
+  template <size_t I>
+  using Leaf_t = TupleLeaf<I, Nth_t<I>>;
 
   constexpr Tuple() = default;
 
   template <typename... Us>
+    requires(sizeof...(Us) == sizeof...(Ts))
   constexpr explicit Tuple(Us&&... us)
-      : base(std::forward<Us>(us)...) {}
+      : Base(std::forward<Us>(us)...) {}
 
   template <size_t I>
   constexpr auto& get() {
-    using T = typename NthType<I, Ts...>::type;
-    return static_cast<TupleLeaf<I, T>&>(*this).value;
+    static_assert(I < sizeof...(Ts));
+    return static_cast<Leaf_t<I>&>(*this).value;
   }
 
   template <size_t I>
   constexpr auto& get() const {
-    using T = typename NthType<I, Ts...>::type;
-    return static_cast<const TupleLeaf<I, T>&>(*this).value;
+    static_assert(I < sizeof...(Ts));
+    return static_cast<const Leaf_t<I>&>(*this).value;
   }
 };
