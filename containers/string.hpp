@@ -163,6 +163,10 @@ public:
     return *this;
   }
 
+  size_t size() const noexcept {
+    return len;
+  }
+
   char* begin() const noexcept {
     return ptr;
   }
