@@ -12,7 +12,7 @@
 - **Hash Table** - HashMap\<K, V>
 - **Hash Set** - HashSet\<V> 
 - **Dynamic String** - String
-- **Fixed Size string** - Str
+- **Fixed Size String** - Str
 - **Pair** - Pair<T1, T2>
 - **Vec** - Vec2<T>, Vec3<T> 
 - **Tuple** - Tuple<T..>
