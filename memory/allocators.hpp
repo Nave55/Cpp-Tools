@@ -67,6 +67,8 @@ public:
 
   virtual bool supportsResize() const noexcept = 0;
 
+  virtual bool canAlwaysFree() const noexcept = 0;
+
   virtual size_t getSize() const noexcept = 0;
 
   virtual size_t getUsed() const noexcept = 0;
@@ -128,18 +130,27 @@ struct Heap final : public MemAllocator {
   bool supportsResize() const noexcept override {
     return true;
   }
+
+  bool canAlwaysFree() const noexcept override {
+    return true;
+  }
+
   size_t getSize() const noexcept override {
     return current_used;
   }
+
   size_t getUsed() const noexcept override {
     return current_used;
   }
+
   size_t getFree() const noexcept override {
     return 0;
   }
+
   size_t getChunkSize() const noexcept override {
     return current_used;
   }
+
   AllocType getType() const noexcept override {
     return AllocType::Heap;
   }
@@ -264,6 +275,10 @@ public:
     std::printf("Current Offset: %zu\n", m_curr_off);
     std::printf("Previous Offset: %zu\n", m_prev_off);
     std::printf("Size of Arena: %zu\n", m_buf_len);
+  }
+
+  bool canAlwaysFree() const noexcept override {
+    return false;
   }
 
   bool supportsResize() const noexcept override {
@@ -493,6 +508,10 @@ public:
     return true;
   }
 
+  bool canAlwaysFree() const noexcept override {
+    return false;
+  }
+
   size_t getUsed() const noexcept override {
     return m_curr_off;
   }
@@ -618,6 +637,10 @@ public:
 
   void* memResize(void*, size_t, size_t, size_t) noexcept override {
     panic("Pool Can't resize");
+  }
+
+  bool canAlwaysFree() const noexcept override {
+    return true;
   }
 
   bool supportsResize() const noexcept override {
