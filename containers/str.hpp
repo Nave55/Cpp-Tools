@@ -10,15 +10,15 @@ public:
   char ptr[N + 1];
 
 public:
-  constexpr Str(const char (&str)[N + 1]) {
+  constexpr Str(const char (&str)[N + 1]) noexcept {
     for (size_t i = 0; i < N; ++i) ptr[i] = str[i];
     ptr[N] = '\0';
   }
 
-  ~Str() = default;
-  constexpr Str(const Str& other) = default;
+  ~Str() noexcept = default;
+  constexpr Str(const Str& other) noexcept = default;
   constexpr Str(Str&& other) noexcept = default;
-  constexpr Str& operator=(const Str& other) = default;
+  constexpr Str& operator=(const Str& other) noexcept = default;
   constexpr Str& operator=(Str&& other) noexcept = default;
 
   constexpr char& operator[](size_t i) noexcept {
