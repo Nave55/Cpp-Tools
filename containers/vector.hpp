@@ -153,6 +153,10 @@ public:
     return ptr[i];
   }
 
+  size_t size() const noexcept {
+    return len;
+  }
+
   T* begin() const noexcept {
     return ptr;
   }
