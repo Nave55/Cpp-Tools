@@ -12,9 +12,9 @@ struct FixedVector {
   size_t len = 0;
   size_t cap = N;
 
-  explicit FixedVector() = default;
+  explicit FixedVector() noexcept = default;
 
-  explicit FixedVector(std::initializer_list<T> lst) {
+  explicit FixedVector(std::initializer_list<T> lst) noexcept {
     size_t count = (N < lst.size()) ? N : lst.size();
     auto it = lst.begin();
     for (size_t i = 0; i < count; ++i) {
@@ -23,7 +23,7 @@ struct FixedVector {
     len = count;
   }
 
-  FixedVector(const FixedVector& other)
+  FixedVector(const FixedVector& other) noexcept
       : len(other.len),
         cap(other.cap) {
     for (size_t i = 0; i < other.len; ++i) {
@@ -40,7 +40,7 @@ struct FixedVector {
     other.len = 0;
   }
 
-  FixedVector& operator=(const FixedVector& other) {
+  FixedVector& operator=(const FixedVector& other) noexcept {
     if (this != &other) {
       for (size_t i = 0; i < other.len; ++i) {
         arr[i] = other.arr[i];
@@ -63,7 +63,7 @@ struct FixedVector {
     return *this;
   }
 
-  ~FixedVector() = default;
+  ~FixedVector() noexcept = default;
 
   T& operator[](size_t i) noexcept {
     return arr[i];
@@ -212,8 +212,7 @@ struct FixedVector {
   }
 
   template <typename... Args>
-    requires(sizeof...(Args) == 1 &&
-             std::is_same_v<T, std::remove_cvref_t<Args>...>)
+    requires(sizeof...(Args) == 1 && std::is_same_v<T, std::remove_cvref_t<Args>...>)
   void emplaceBack(Args&&... args) noexcept {
     new (&arr[len]) T(std::forward<Args>(args)...);
     ++len;
