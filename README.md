@@ -1,4 +1,4 @@
-# Cpp Tools
+# sl (custom std library for c++)
 
 ## Uses C++ 26
 
