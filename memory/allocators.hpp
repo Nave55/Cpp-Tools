@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cassert>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -78,20 +76,47 @@ public:
 // *******************************************************
 
 struct Heap final : public MemAllocator {
-  size_t ttl = 0;    // total bytes ever allocated
-  size_t freed = 0;  // total bytes ever freed
+  size_t user_bytes = 0;  // user bytes allocated
+  size_t user_freed = 0;  // user bytes freed
+  size_t heap_bytes = 0;  // total bytes allocated
+  size_t heap_freed = 0;  // total bytes freed
 
-  void* allocate(size_t bytes, size_t) noexcept override {
+  Heap() = default;
+  ~Heap() = default;
+
+  Heap(const Heap&) = delete;
+  Heap(Heap&&) = delete;
+  Heap& operator=(const Heap&) = delete;
+  Heap& operator=(Heap&&) = delete;
+
+  void* allocate(size_t bytes, size_t = 0) noexcept override {
     const size_t total_bytes = bytes + sizeof(size_t);
 
     auto* raw = static_cast<size_t*>(std::malloc(total_bytes));
+
     if (!raw) return nullptr;
 
     *raw = bytes;
 
-    ttl += bytes;
-
+    user_bytes += bytes;
+    heap_bytes += bytes + sizeof(size_t);
     return raw + 1;
+  }
+
+  template <typename T>
+  T* alloc(const T& val) noexcept {
+    size_t bytes = sizeof(T);
+
+    auto* mem = static_cast<size_t*>(std::malloc(sizeof(size_t) + bytes));
+
+    if (!mem) return nullptr;
+
+    *mem = bytes;
+
+    user_bytes += bytes;
+    heap_bytes += bytes + sizeof(size_t);
+
+    return new (mem + 1) T(val);
   }
 
   void* resize(void* old_ptr, size_t, size_t new_size, size_t) noexcept override {
@@ -108,7 +133,13 @@ struct Heap final : public MemAllocator {
 
     *raw = new_size;
 
-    ttl += (new_size > old_size) ? new_size - old_size : old_size - new_size;
+    if (new_size > old_size) {
+      user_bytes += new_size - old_size;
+      heap_bytes += new_size - old_size;
+    } else {
+      user_freed += old_size - new_size;
+      heap_freed += old_size - new_size;
+    }
 
     return raw + 1;
   }
@@ -117,9 +148,11 @@ struct Heap final : public MemAllocator {
     if (!ptr) return;
 
     auto* header = static_cast<size_t*>(ptr) - 1;
+
     const size_t size = *header;
 
-    freed += size;
+    user_freed += size;
+    heap_freed += size + sizeof(size_t);
 
     std::free(header);
   }
@@ -140,10 +173,20 @@ struct Heap final : public MemAllocator {
     return AllocType::Heap;
   }
 
+  template <typename T>
+  void destroy(T* ptr) {
+    if (!ptr) return;
+
+    ptr->~T();
+    free(ptr);
+  }
+
   void memReport() const noexcept {
     std::printf("Memory Usage:\n");
-    std::printf("  Allocated: %zu bytes\n", ttl);
-    std::printf("  Freed:     %zu bytes\n", freed);
+    std::printf("  User Allocated:  %zu bytes\n", user_bytes);
+    std::printf("  User Freed:      %zu bytes\n\n", user_freed);
+    std::printf("  Total Allocated: %zu bytes\n", heap_bytes);
+    std::printf("  Total Freed:     %zu bytes\n", heap_freed);
   }
 };
 
@@ -172,30 +215,9 @@ public:
   }
 
   Arena(const Arena&) = delete;
+  Arena(Arena&&) = delete;
   Arena& operator=(const Arena&) = delete;
-
-  Arena(Arena&& o) noexcept
-      : m_buf(o.m_buf),
-        m_buf_len(o.m_buf_len),
-        m_prev_off(o.m_prev_off),
-        m_curr_off(o.m_curr_off) {
-    o.m_buf = nullptr;
-    o.m_buf_len = 0;
-  }
-
-  Arena& operator=(Arena&& o) noexcept {
-    if (this != &o) {
-      ::operator delete[](m_buf, std::align_val_t{DEFAULT_ALIGNMENT});
-      m_buf = o.m_buf;
-      m_buf_len = o.m_buf_len;
-      m_prev_off = o.m_prev_off;
-      m_curr_off = o.m_curr_off;
-
-      o.m_buf = nullptr;
-      o.m_buf_len = 0;
-    }
-    return *this;
-  }
+  Arena& operator=(Arena&&) = delete;
 
   void* allocate(size_t size, size_t alignment) noexcept override {
     if (size == 0) panic("Size must be greater than zero");
@@ -349,7 +371,9 @@ public:
   }
 
   Stack(const Stack&) = delete;
+  Stack(Stack&&) = delete;
   Stack& operator=(const Stack&) = delete;
+  Stack& operator=(Stack&&) = delete;
 
   void* allocate(size_t size, size_t alignment = DEFAULT_ALIGNMENT) noexcept override {
     if (!isPowerOfTwo(alignment)) panic("Must be a power of two");
@@ -523,6 +547,14 @@ public:
     return AllocType::Stack;
   }
 
+  template <typename T>
+  void destroy(T* ptr) {
+    if (!ptr) return;
+
+    ptr->~T();
+    free(ptr);
+  }
+
 private:
   static constexpr size_t m_calcPaddingWithHeader(uintptr_t ptr, size_t alignment,
                                                   size_t header_size) noexcept {
@@ -596,6 +628,11 @@ public:
     ::operator delete[](m_buf, std::align_val_t{alignof(std::max_align_t)});
   }
 
+  Pool(const Pool&) = delete;
+  Pool(Pool&&) = delete;
+  Pool& operator=(const Pool&) = delete;
+  Pool& operator=(Pool&&) = delete;
+
   void* allocate(size_t = 0, size_t = 0) noexcept override {
     if (!m_head) return nullptr;
     PoolFreeNode* node = m_head;
@@ -662,6 +699,14 @@ public:
 
   AllocType getType() const noexcept override {
     return AllocType::Pool;
+  }
+
+  template <typename T>
+  void destroy(T* ptr) {
+    if (!ptr) return;
+
+    ptr->~T();
+    free(ptr);
   }
 };
 
