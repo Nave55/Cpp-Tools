@@ -1,28 +1,36 @@
-#include <iostream>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 
-struct AllocationMetrics {
-    uint32_t total_allocated = 0;
-    uint32_t total_freed = 0;
+struct Tracker {
+  uint32_t total_allocated = 0;
+  uint32_t total_freed = 0;
 
-    void CurrentUsage() const {
-        std::cout << "Metrics:\n" << "   Allocated: " << total_allocated << " bytes\n   Freed:     " << total_freed << " bytes\n"; 
-    }
+  void CurrentUsage() const {
+    std::printf("Memory Usage:\n  Allocated: %d bytes\n  Freed:     %d bytes\n", total_allocated,
+                total_freed);
+  };
+
+  template <typename T>
+  auto alloc(T val) -> T* {
+    total_allocated += sizeof(T);
+    return new T(val);
+  }
+
+  template <typename T>
+  auto dealloc(T* memory) -> void {
+    total_freed += sizeof(T);
+    delete memory;
+  }
+
+  auto malloc(size_t size) -> void* {
+    total_allocated += size;
+    return ::malloc(size);
+  }
+
+  template <typename T>
+  auto free(T* memory) -> void {
+    total_freed += sizeof(T);
+    ::free(memory);
+  }
 };
-
-static auto s_metrics = AllocationMetrics(); 
-
-auto operator new(size_t size) -> void* {
-    s_metrics.total_allocated += size;
-
-    return malloc(size);
-}
-
-auto operator delete(void *memory, size_t size) -> void {
-    s_metrics.total_freed += size;
-    free(memory);
-}
-
-auto operator delete(void *memory) -> void {
-    free(memory);
-}
