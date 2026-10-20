@@ -1,36 +1,36 @@
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 
 struct Tracker {
-  uint32_t total_allocated = 0;
-  uint32_t total_freed = 0;
+  size_t ttl = 0;
+  size_t freed = 0;
 
   void CurrentUsage() const {
-    std::printf("Memory Usage:\n  Allocated: %d bytes\n  Freed:     %d bytes\n", total_allocated,
-                total_freed);
+    std::printf("Memory Usage:\n");
+    std::printf("  Allocated: %zu bytes\n", ttl);
+    std::printf("  Freed:     %zu bytes\n", freed);
   };
 
   template <typename T>
   auto alloc(T val) -> T* {
-    total_allocated += sizeof(T);
+    ttl += sizeof(T);
     return new T(val);
   }
 
   template <typename T>
   auto dealloc(T* memory) -> void {
-    total_freed += sizeof(T);
+    freed += sizeof(T);
     delete memory;
   }
 
   auto malloc(size_t size) -> void* {
-    total_allocated += size;
+    ttl += size;
     return ::malloc(size);
   }
 
   template <typename T>
   auto free(T* memory) -> void {
-    total_freed += sizeof(T);
+    freed += sizeof(T);
     ::free(memory);
   }
 };
