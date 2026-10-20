@@ -42,6 +42,7 @@ inline size_t min(size_t a, size_t b) {
 
 enum class AllocType {
   Heap,
+  Tracking,
   Arena,
   Stack,
   Pool,
@@ -76,18 +77,74 @@ public:
 // *******************************************************
 
 struct Heap final : public MemAllocator {
+  Heap() = default;
+  ~Heap() = default;
+  Heap(const Heap&) = delete;
+  Heap(Heap&&) = delete;
+  Heap& operator=(const Heap&) = delete;
+  Heap& operator=(Heap&&) = delete;
+
+  void* allocate(size_t bytes, size_t = 0) noexcept override {
+    return std::malloc(bytes);
+  }
+
+  template <typename T>
+  T* alloc(const T& val) noexcept {
+    T* ptr = static_cast<T*>(std::malloc(sizeof(T)));
+    *ptr = val;
+    return ptr;
+  }
+
+  void* resize(void* old_ptr, size_t, size_t new_size, size_t) noexcept override {
+    return std::realloc(old_ptr, new_size);
+  }
+
+  void free(void* ptr) noexcept override {
+    std::free(ptr);
+  }
+
+  bool canResize() const noexcept override {
+    return true;
+  }
+
+  bool canAlwaysFree() const noexcept override {
+    return true;
+  }
+
+  size_t getChunkSize() const noexcept override {
+    return SIZE_MAX;
+  }
+
+  AllocType getType() const noexcept override {
+    return AllocType::Heap;
+  }
+
+  template <typename T>
+  void destroy(T* ptr) {
+    if (!ptr) return;
+
+    ptr->~T();
+    free(ptr);
+  }
+};
+
+// *******************************************************
+//                   Tracking Allocator
+// *******************************************************
+
+struct Tracking final : public MemAllocator {
   size_t user_bytes = 0;  // user bytes allocated
   size_t user_freed = 0;  // user bytes freed
   size_t heap_bytes = 0;  // total bytes allocated
   size_t heap_freed = 0;  // total bytes freed
 
-  Heap() = default;
-  ~Heap() = default;
+  Tracking() = default;
+  ~Tracking() = default;
 
-  Heap(const Heap&) = delete;
-  Heap(Heap&&) = delete;
-  Heap& operator=(const Heap&) = delete;
-  Heap& operator=(Heap&&) = delete;
+  Tracking(const Tracking&) = delete;
+  Tracking(Tracking&&) = delete;
+  Tracking& operator=(const Tracking&) = delete;
+  Tracking& operator=(Tracking&&) = delete;
 
   void* allocate(size_t bytes, size_t = 0) noexcept override {
     const size_t total_bytes = bytes + sizeof(size_t);
@@ -170,7 +227,7 @@ struct Heap final : public MemAllocator {
   }
 
   AllocType getType() const noexcept override {
-    return AllocType::Heap;
+    return AllocType::Tracking;
   }
 
   template <typename T>
