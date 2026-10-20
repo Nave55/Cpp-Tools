@@ -2,6 +2,8 @@
 
 ## Uses C++ 26
 
+### Aim is to provide a std library which improves compile times and allows for use of custom allocators
+
 **Currently Contains:**
 
 - **Custom Allocators** - Arena, Pool, Stack, Heap, Tracking
