@@ -22,7 +22,7 @@ public:
         len{0},
         cap{8},
         ptr{static_cast<T*>(m_alloc->memAllocate(sizeof(T) * 8, alignof(T)))} {
-    if (sizeof(T) * 10 > m_alloc->getChunkSize()) {
+    if (sizeof(T) * cap > m_alloc->getChunkSize()) {
       panic("Initial Vec capacity does not fit in a pool chunk");
     }
   }
