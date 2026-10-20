@@ -1,16 +1,17 @@
 #pragma once
 
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <new>
 
 constexpr size_t DEFAULT_ALIGNMENT = 2 * sizeof(void*);
-constexpr size_t BYTE = 1ULL;
-constexpr size_t KB = 1024ULL;
-constexpr size_t MB = KB * 1024ULL;
-constexpr size_t GB = MB * 1024ULL;
+constexpr size_t BYTE = 1;
+constexpr size_t KB = 1024;
+constexpr size_t MB = KB * 1024ZU;
+constexpr size_t GB = MB * 1024ZU;
 
 [[noreturn]] static inline void panic(const char* msg) {
   std::fprintf(stderr, "PANIC: %s\n", msg);
@@ -85,47 +86,55 @@ public:
 // *******************************************************
 
 struct Heap final : public MemAllocator {
-  size_t ttl = 0;
-  size_t current_used = 0;
+  size_t ttl = 0;    // total bytes ever allocated
+  size_t freed = 0;  // total bytes ever freed
 
   void* memAllocate(size_t bytes, size_t) noexcept override {
-    size_t total_bytes = bytes + sizeof(size_t);
-    size_t* raw = static_cast<size_t*>(malloc(total_bytes));
+    const size_t total_bytes = bytes + sizeof(size_t);
+
+    auto* raw = static_cast<size_t*>(std::malloc(total_bytes));
     if (!raw) return nullptr;
 
     *raw = bytes;
-    ttl += bytes;
-    current_used += bytes;
 
-    return static_cast<void*>(raw + 1);
+    ttl += bytes;
+
+    return raw + 1;
   }
 
   void* memResize(void* old_ptr, size_t, size_t new_size, size_t) noexcept override {
     if (!old_ptr) return memAllocate(new_size, 1);
 
-    size_t* header = static_cast<size_t*>(old_ptr) - 1;
-    size_t old_size = *header;
+    auto* header = static_cast<size_t*>(old_ptr) - 1;
+    const size_t old_size = *header;
 
-    size_t total_bytes = new_size + sizeof(size_t);
-    size_t* raw = static_cast<size_t*>(realloc(header, total_bytes));
+    const size_t total_bytes = new_size + sizeof(size_t);
+
+    auto* raw = static_cast<size_t*>(std::realloc(header, total_bytes));
+
     if (!raw) return nullptr;
 
     *raw = new_size;
-    current_used = current_used - old_size + new_size;
 
-    return static_cast<void*>(raw + 1);
+    ttl += (new_size > old_size) ? new_size - old_size : old_size - new_size;
+
+    return raw + 1;
   }
 
   void memFree(void* ptr) noexcept override {
     if (!ptr) return;
 
-    size_t* header = static_cast<size_t*>(ptr) - 1;
-    size_t size = *header;
-    current_used -= size;
-    free(header);
+    auto* header = static_cast<size_t*>(ptr) - 1;
+    const size_t size = *header;
+
+    freed += size;
+
+    std::free(header);
   }
 
-  void memFreeAll() noexcept override {}  // does nothing
+  void memFreeAll() noexcept override {
+    // individual frees only
+  }
 
   bool supportsResize() const noexcept override {
     return true;
@@ -136,11 +145,11 @@ struct Heap final : public MemAllocator {
   }
 
   size_t getSize() const noexcept override {
-    return current_used;
+    return ttl - freed;
   }
 
   size_t getUsed() const noexcept override {
-    return current_used;
+    return ttl - freed;
   }
 
   size_t getFree() const noexcept override {
@@ -148,7 +157,7 @@ struct Heap final : public MemAllocator {
   }
 
   size_t getChunkSize() const noexcept override {
-    return current_used;
+    return SIZE_MAX;
   }
 
   AllocType getType() const noexcept override {
@@ -156,8 +165,8 @@ struct Heap final : public MemAllocator {
   }
 
   void printMemUsage() const noexcept {
-    std::printf("Memory Allocated: %zu\n", ttl);
-    std::printf("Memory Not Freed: %zu\n", current_used);
+    std::printf("Total Allocated: %zu\n", ttl);
+    std::printf("Total Freed:     %zu\n", freed);
   }
 };
 
