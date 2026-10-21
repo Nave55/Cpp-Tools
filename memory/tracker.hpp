@@ -5,12 +5,6 @@ struct Tracker {
   size_t ttl = 0;
   size_t freed = 0;
 
-  void CurrentUsage() const {
-    std::printf("Memory Usage:\n");
-    std::printf("  Allocated: %zu bytes\n", ttl);
-    std::printf("  Freed:     %zu bytes\n", freed);
-  };
-
   template <typename T>
   auto alloc(T val) -> T* {
     ttl += sizeof(T);
@@ -33,4 +27,10 @@ struct Tracker {
     freed += sizeof(T);
     ::free(memory);
   }
+
+  void memReport() const {
+    std::printf("Memory Usage:\n");
+    std::printf("  Allocated: %zu bytes\n", ttl);
+    std::printf("  Freed:     %zu bytes\n", freed);
+  };
 };
