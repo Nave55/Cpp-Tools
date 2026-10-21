@@ -119,6 +119,18 @@ public:
     return *this;
   };
 
+  bool operator==(char* str) const noexcept {
+    return std::strcmp(ptr, str) == 0;
+  }
+
+  bool operator==(const char* str) const noexcept {
+    return std::strcmp(ptr, str) == 0;
+  }
+
+  bool operator==(const String& str) const noexcept {
+    return std::strcmp(ptr, str.ptr) == 0;
+  }
+
   char& operator[](size_t i) noexcept {
     return ptr[i];
   }
