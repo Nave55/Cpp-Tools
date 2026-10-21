@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <optional>
 #include <span>
-#include <type_traits>
+#include "../tools/concepts.hpp"
 
 template <typename T, size_t N>
 struct Array {
@@ -60,28 +60,28 @@ struct Array {
   }
 
   Array& operator+=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val += scalar;
     return *this;
   }
 
   Array& operator-=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val -= scalar;
     return *this;
   }
 
   Array& operator*=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val *= scalar;
     return *this;
   }
 
   Array& operator/=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val /= scalar;
     return *this;
