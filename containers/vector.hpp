@@ -126,6 +126,13 @@ public:
     return *this;
   }
 
+  bool operator==(const Vector& other) const {
+    for (size_t i = 0; i < len; ++i) {
+      if (!(ptr[i] == other.ptr[i])) return false;
+    }
+    return true;
+  }
+
   T& operator[](size_t i) noexcept {
     return ptr[i];
   }
