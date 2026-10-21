@@ -11,6 +11,8 @@ constexpr size_t KB = 1024;
 constexpr size_t MB = KB * 1024ZU;
 constexpr size_t GB = MB * 1024ZU;
 
+#define MIN(a, b) (((a) < (b) ? (a) : (b)))
+
 [[noreturn]] static inline void panic(const char* msg) {
   std::fprintf(stderr, "PANIC: %s\n", msg);
   abort();
@@ -20,25 +22,21 @@ constexpr bool isPowerOfTwo(const size_t x) {
   return x != 0 && (x & (x - 1)) == 0;
 }
 
-constexpr size_t alignForwardSize(const size_t size, const size_t alignment) {
-  if (!isPowerOfTwo(alignment)) panic("Not Aligned");
-  return (size + (alignment - 1)) & ~(alignment - 1);
-}
+// constexpr size_t alignForwardSize(const size_t size, const size_t alignment) {
+//   if (!isPowerOfTwo(alignment)) panic("Alignment not power of two");
+//   return (size + (alignment - 1)) & ~(alignment - 1);
+// }
 
-constexpr uintptr_t alignForwardUintptr(const uintptr_t p, const uintptr_t alignment) {
-  uintptr_t mask = alignment - 1;
-  return (p + mask) & ~mask;
-}
+// constexpr uintptr_t alignForwardUintptr(const uintptr_t p, const uintptr_t alignment) {
+//   uintptr_t mask = alignment - 1;
+//   return (p + mask) & ~mask;
+// }
 
 inline void* alignForward(void* p, size_t alignment) noexcept {
-  if (!isPowerOfTwo(alignment)) panic("Not Aligned");
+  if (!isPowerOfTwo(alignment)) panic("Alignment not power of two");
   uintptr_t addr = reinterpret_cast<uintptr_t>(p);
   uintptr_t aligned = (addr + alignment - 1) & ~(alignment - 1);
   return reinterpret_cast<void*>(aligned);
-}
-
-inline size_t min(size_t a, size_t b) {
-  return a < b ? a : b;
 }
 
 enum class AllocType {
@@ -279,7 +277,7 @@ public:
     if (alignment > 128) alignment = 128;
 
     unsigned char* raw = m_buf + m_curr_off;
-    unsigned char* aligned = static_cast<unsigned char*>(alignFoward(raw, alignment));
+    unsigned char* aligned = static_cast<unsigned char*>(alignForward(raw, alignment));
 
     size_t new_off = aligned - m_buf;
     if (new_off + size > m_buf_len) panic("Arena out of memory");
@@ -314,7 +312,7 @@ public:
     void* newp = allocate(new_size, alignment);
     if (!newp) panic("New Pointer wasn't allocated in arena");
 
-    std::memmove(newp, old_ptr, min(old_size, new_size));
+    std::memmove(newp, old_ptr, MIN(old_size, new_size));
     return newp;
   }
 
@@ -517,7 +515,7 @@ public:
     void* new_ptr = allocate(new_size, alignment);
     if (!new_ptr) return nullptr;
 
-    size_t copy_size = min(header->alloc_size, new_size);
+    size_t copy_size = MIN(header->alloc_size, new_size);
     std::memmove(new_ptr, old_ptr, copy_size);
 
     return new_ptr;
@@ -780,5 +778,7 @@ public:
     m_pool.m_head = m_marker;
   }
 };
+
+#undef MIN
 
 extern Heap heap_alloc;
