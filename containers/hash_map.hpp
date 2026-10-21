@@ -147,6 +147,17 @@ public:
     return cap - len;
   }
 
+  bool operator==(const HashMap& other) const noexcept {
+    if (len != other.len) return false;
+
+    for (const auto& [k, v] : other) {
+      auto val = find(k);
+      if (!val || *val != v) return false;
+    }
+
+    return true;
+  }
+
   V* operator[](const K& key) noexcept {
     return find(key);
   }
