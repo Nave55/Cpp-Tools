@@ -73,28 +73,28 @@ struct FixedVector {
   }
 
   FixedVector& operator+=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val += scalar;
     return *this;
   }
 
   FixedVector& operator-=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val -= scalar;
     return *this;
   }
 
   FixedVector& operator*=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val *= scalar;
     return *this;
   }
 
   FixedVector& operator/=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val /= scalar;
     return *this;
