@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <optional>
 #include <span>
-#include <type_traits>
 #include "../memory/allocators.hpp"
+#include "../tools/concepts.hpp"
 
 template <typename T>
 class Vector {
@@ -135,28 +135,28 @@ public:
   }
 
   Vector& operator+=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val += scalar;
     return *this;
   }
 
   Vector& operator-=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val -= scalar;
     return *this;
   }
 
   Vector& operator*=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val *= scalar;
     return *this;
   }
 
   Vector& operator/=(const T& scalar)
-    requires std::is_arithmetic_v<T>
+    requires Numeric<T>
   {
     for (auto& val : *this) val /= scalar;
     return *this;
