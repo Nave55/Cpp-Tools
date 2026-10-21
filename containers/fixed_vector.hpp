@@ -208,19 +208,19 @@ struct FixedVector {
   template <typename S>
     requires std::is_same_v<std::remove_cvref_t<S>, T>
   void pushBack(S&& val) noexcept {
-    arr[len++] = std::forward<S>(val);
+    if (len < cap) arr[len++] = std::forward<S>(val);
   }
 
   template <typename... Args>
     requires(sizeof...(Args) == 1 && std::is_same_v<T, std::remove_cvref_t<Args>...>)
   void emplaceBack(Args&&... args) noexcept {
-    new (&arr[len]) T(std::forward<Args>(args)...);
-    ++len;
+    if (len < cap) new (&arr[len++]) T(std::forward<Args>(args)...);
   }
 
   template <typename S>
     requires std::is_same_v<std::remove_cvref_t<S>, T>
   void insert(S&& val, size_t ind) noexcept {
+    if (len >= cap) return;
     if (ind > len) ind = len;
     for (size_t i = len; i > ind; --i) arr[i] = std::move(arr[i - 1]);
 
