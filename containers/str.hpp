@@ -21,6 +21,18 @@ public:
   constexpr Str& operator=(const Str& other) noexcept = default;
   constexpr Str& operator=(Str&& other) noexcept = default;
 
+  bool operator==(char* str) const noexcept {
+    return std::strcmp(ptr, str) == 0;
+  }
+
+  bool operator==(const char* str) const noexcept {
+    return std::strcmp(ptr, str) == 0;
+  }
+
+  bool operator==(const Str<N>& str) const noexcept {
+    return std::strcmp(ptr, str.ptr) == 0;
+  }
+
   constexpr char& operator[](size_t i) noexcept {
     return ptr[i];
   }
