@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include "pair.hpp"
 #include "vector.hpp"
 
