@@ -26,7 +26,7 @@ public:
       : m_alloc{&alloc},
         len{0},
         cap{std::max<size_t>(1, init_cap)},
-        ptr{static_cast<char*>(m_alloc->memAllocate(sizeof(char) * (cap + 1), alignof(char)))} {
+        ptr{static_cast<char*>(m_alloc->allocate(sizeof(char) * (cap + 1), alignof(char)))} {
     if (sizeof(char) * (cap + 1) > m_alloc->getChunkSize()) {
       panic("Initial String capacity does not fit in allocated chunk");
     }
@@ -38,7 +38,7 @@ public:
       : m_alloc{&alloc},
         len{std::strlen(str)},
         cap{std::max<size_t>(1, len)},
-        ptr{static_cast<char*>(m_alloc->memAllocate(sizeof(char) * (cap + 1), alignof(char)))} {
+        ptr{static_cast<char*>(m_alloc->allocate(sizeof(char) * (cap + 1), alignof(char)))} {
     if (sizeof(char) * (cap + 1) > m_alloc->getChunkSize())
       panic("Initial String capacity does not fit in allocated chunk");
 
@@ -53,7 +53,7 @@ public:
 
     cap = std::max<size_t>(1, init_cap);
 
-    ptr = static_cast<char*>(m_alloc->memAllocate(sizeof(char) * (cap + 1), alignof(char)));
+    ptr = static_cast<char*>(m_alloc->allocate(sizeof(char) * (cap + 1), alignof(char)));
 
     if (!ptr) panic("String(cap): allocation failed");
 
@@ -64,14 +64,14 @@ public:
   }
 
   ~String() noexcept {
-    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
+    if (m_alloc->canAlwaysFree()) m_alloc->free(ptr);
   }
 
   String(const String& str) noexcept
       : m_alloc{str.m_alloc},
         len{str.len},
         cap{str.cap},
-        ptr{static_cast<char*>(m_alloc->memAllocate(sizeof(char) * (str.cap + 1), alignof(char)))} {
+        ptr{static_cast<char*>(m_alloc->allocate(sizeof(char) * (str.cap + 1), alignof(char)))} {
     std::memcpy(ptr, str.ptr, len + 1);  // copy including '\0'
   }
 
@@ -88,13 +88,13 @@ public:
   String& operator=(const String& other) noexcept {
     if (this == &other) return *this;
 
-    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
+    if (m_alloc->canAlwaysFree()) m_alloc->free(ptr);
 
     m_alloc = other.m_alloc;
     len = other.len;
     cap = other.cap;
 
-    ptr = static_cast<char*>(m_alloc->memAllocate(sizeof(char) * (cap + 1), alignof(char)));
+    ptr = static_cast<char*>(m_alloc->allocate(sizeof(char) * (cap + 1), alignof(char)));
     if (!ptr) panic("String copy assignment: allocation failed");
 
     std::memcpy(ptr, other.ptr, len + 1);
@@ -105,7 +105,7 @@ public:
   String& operator=(String&& other) noexcept {
     if (this == &other) return *this;
 
-    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
+    if (m_alloc->canAlwaysFree()) m_alloc->free(ptr);
 
     m_alloc = other.m_alloc;
     len = other.len;
@@ -412,21 +412,20 @@ private:
     size_t old_bytes = (cap + 1) * sizeof(char);
     size_t new_bytes = (new_cap + 1) * sizeof(char);
 
-    if (m_alloc->supportsResize()) {
-      char* new_str =
-          static_cast<char*>(m_alloc->memResize(ptr, old_bytes, new_bytes, alignof(char)));
+    if (m_alloc->canResize()) {
+      char* new_str = static_cast<char*>(m_alloc->resize(ptr, old_bytes, new_bytes, alignof(char)));
       if (!new_str) panic("Allocator resize failed");
 
       ptr = new_str;
       cap = new_cap;
     } else {
       char* new_str =
-          static_cast<char*>(m_alloc->memAllocate(sizeof(char) * (new_cap + 1), alignof(char)));
+          static_cast<char*>(m_alloc->allocate(sizeof(char) * (new_cap + 1), alignof(char)));
       if (!new_str) panic("Allocator resize failed");
 
       std::memcpy(new_str, ptr, len + 1);  // include '\0'
 
-      if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
+      if (m_alloc->canAlwaysFree()) m_alloc->free(ptr);
       ptr = new_str;
       cap = new_cap;
     }
