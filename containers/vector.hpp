@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <optional>
 #include <span>
-#include <typeinfo>
 #include "../memory/allocators.hpp"
 
 template <typename T>
@@ -21,7 +20,7 @@ public:
       : m_alloc{&alloc},
         len{0},
         cap{8},
-        ptr{static_cast<T*>(m_alloc->memAllocate(sizeof(T) * 8, alignof(T)))} {
+        ptr{static_cast<T*>(m_alloc->allocate(sizeof(T) * 8, alignof(T)))} {
     if (sizeof(T) * cap > m_alloc->getChunkSize()) {
       panic("Initial Vec capacity does not fit in a pool chunk");
     }
@@ -31,7 +30,7 @@ public:
       : m_alloc{&alloc},
         len{0},
         cap{cap},
-        ptr{static_cast<T*>(m_alloc->memAllocate(sizeof(T) * cap, alignof(T)))} {
+        ptr{static_cast<T*>(m_alloc->allocate(sizeof(T) * cap, alignof(T)))} {
     if (sizeof(T) * cap > m_alloc->getChunkSize())
       panic("Initial Vec capacity does not fit in a pool chunk");
   }
@@ -40,7 +39,7 @@ public:
       : m_alloc{&alloc},
         len{sz},
         cap{cap},
-        ptr{static_cast<T*>(m_alloc->memAllocate(sizeof(T) * cap, alignof(T)))} {
+        ptr{static_cast<T*>(m_alloc->allocate(sizeof(T) * cap, alignof(T)))} {
     if (sizeof(T) * cap > m_alloc->getChunkSize())
       panic("Initial Vec capacity does not fit in a pool chunk");
 
@@ -51,7 +50,7 @@ public:
       : m_alloc{&alloc},
         len{lst.size()},
         cap{lst.size()},
-        ptr{static_cast<T*>(m_alloc->memAllocate(sizeof(T) * lst.size(), alignof(T)))} {
+        ptr{static_cast<T*>(m_alloc->allocate(sizeof(T) * lst.size(), alignof(T)))} {
     if (sizeof(T) * lst.size() > m_alloc->getChunkSize())
       panic("Initial Vec capacity does not fit in a pool chunk");
 
@@ -63,8 +62,7 @@ public:
       : m_alloc{&alloc},
         len{lst.size()},
         cap{std::max(cap, lst.size())},
-        ptr{static_cast<T*>(
-            m_alloc->memAllocate(sizeof(T) * std::max(cap, lst.size()), alignof(T)))} {
+        ptr{static_cast<T*>(m_alloc->allocate(sizeof(T) * std::max(cap, lst.size()), alignof(T)))} {
     if (sizeof(T) * std::max(cap, lst.size()) > m_alloc->getChunkSize())
       panic("Initial Vec capacity does not fit in a pool chunk");
 
@@ -72,14 +70,14 @@ public:
   }
 
   ~Vector() noexcept {
-    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
+    if (m_alloc->canAlwaysFree()) m_alloc->free(ptr);
   }
 
   Vector(const Vector& vec) noexcept
       : m_alloc{vec.m_alloc},
         len{vec.len},
         cap{vec.cap},
-        ptr{static_cast<T*>(m_alloc->memAllocate(sizeof(T) * vec.cap, alignof(T)))} {
+        ptr{static_cast<T*>(m_alloc->allocate(sizeof(T) * vec.cap, alignof(T)))} {
     std::copy(vec.ptr, vec.ptr + vec.len, ptr);
   }
 
@@ -96,11 +94,11 @@ public:
   Vector& operator=(const Vector& other) noexcept {
     if (this == &other) return *this;
 
-    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
+    if (m_alloc->canAlwaysFree()) m_alloc->free(ptr);
 
     m_alloc = other.m_alloc;
 
-    ptr = static_cast<T*>(m_alloc->memAllocate(sizeof(T) * other.cap, alignof(T)));
+    ptr = static_cast<T*>(m_alloc->allocate(sizeof(T) * other.cap, alignof(T)));
     if (!ptr) panic("Vec copy assignment: allocation failed");
 
     len = other.len;
@@ -114,7 +112,7 @@ public:
   Vector& operator=(Vector&& other) noexcept {
     if (this == &other) return *this;
 
-    if (m_alloc->canAlwaysFree()) m_alloc->memFree(ptr);
+    if (m_alloc->canAlwaysFree()) m_alloc->free(ptr);
 
     m_alloc = other.m_alloc;
     ptr = other.ptr;
@@ -168,10 +166,6 @@ public:
     return std::span<T>(ptr, len);
   }
 
-  const char* type() const noexcept {
-    return typeid(T).name();
-  }
-
   template <typename PrintFn>
   void print(PrintFn printFn) const noexcept {
     std::printf("[");
@@ -186,10 +180,7 @@ public:
     std::printf("length: ");
     std::printf("%zu", len);
     std::printf(", capacity: ");
-    std::printf("%zu", cap);
-    std::printf(", type: ");
-    printf("%s", type());
-    std::printf("\n");
+    std::printf("%zu\n", cap);
   }
 
   T first() const noexcept {
@@ -386,21 +377,21 @@ private:
     size_t old_bytes = cap * sizeof(T);
     size_t new_bytes = new_cap * sizeof(T);
 
-    if (m_alloc->supportsResize()) {
-      T* new_vec = static_cast<T*>(m_alloc->memResize(ptr, old_bytes, new_bytes, alignof(T)));
+    if (m_alloc->canResize()) {
+      T* new_vec = static_cast<T*>(m_alloc->resize(ptr, old_bytes, new_bytes, alignof(T)));
       if (!new_vec) panic("Allocator resize failed");
 
       ptr = new_vec;
       cap = new_cap;
     } else {
-      T* new_vec = static_cast<T*>(m_alloc->memAllocate(sizeof(T) * new_cap, alignof(T)));
+      T* new_vec = static_cast<T*>(m_alloc->allocate(sizeof(T) * new_cap, alignof(T)));
       if (!new_vec) panic("Allocator resize failed");
 
       for (size_t i = 0; i < len; ++i) new (&new_vec[i]) T(std::move(ptr[i]));
 
       for (size_t i = 0; i < len; ++i) ptr[i].~T();
 
-      m_alloc->memFree(ptr);
+      m_alloc->free(ptr);
       ptr = new_vec;
       cap = new_cap;
     }
