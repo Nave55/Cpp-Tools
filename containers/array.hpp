@@ -60,28 +60,28 @@ struct Array {
   }
 
   Array& operator+=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val += scalar;
     return *this;
   }
 
   Array& operator-=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val -= scalar;
     return *this;
   }
 
   Array& operator*=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val *= scalar;
     return *this;
   }
 
   Array& operator/=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val /= scalar;
     return *this;
