@@ -306,9 +306,7 @@ public:
     requires(sizeof...(Args) == 1 && std::is_same_v<T, std::remove_cvref_t<Args>...>)
   void emplaceBack(Args&&... args) noexcept {
     if (len == cap) m_resizeCapacity(cap * 2);
-
-    new (&ptr[len]) T(std::forward<Args>(args)...);
-    ++len;
+    new (&ptr[len++]) T(std::forward<Args>(args)...);
   }
 
   template <typename S>
@@ -318,10 +316,9 @@ public:
 
     if (len == cap) m_resizeCapacity(cap * 2);
 
-    for (size_t i = len; i > ind; --i) ptr[i] = std::move(ptr[i - 1]);
+    for (size_t i = len++; i > ind; --i) ptr[i] = std::move(ptr[i - 1]);
 
     ptr[ind] = std::forward<S>(val);
-    ++len;
   }
 
   void pop() noexcept {
@@ -330,18 +327,11 @@ public:
 
   std::optional<T> popBack() noexcept {
     if (len <= 0) return std::nullopt;
-
-    T val = ptr[len - 1];
-    --len;
-
-    return val;
+    return std::move(ptr[--len]);
   }
 
   T popBackUnsafe() noexcept {
-    T val = ptr[len - 1];
-    --len;
-
-    return val;
+    return std::move(ptr[--len]);
   }
 
   void orderedRemove(size_t ind) noexcept {
@@ -352,16 +342,17 @@ public:
 
   void unorderedRemove(size_t ind) noexcept {
     if (ind >= len) return;
-    ptr[ind] = std::move(ptr[len - 1]);
-    --len;
+    ptr[ind] = std::move(ptr[--len]);
   }
 
   void deleteVal(T val) noexcept {
+    if (len == 0) return;
     for (int i = len - 1; i >= 0; --i)
       if (ptr[i] == val) orderedRemove(i);
   }
 
   void deleteValUnordered(T val) noexcept {
+    if (len == 0) return;
     for (int i = len - 1; i >= 0; --i)
       if (ptr[i] == val) unorderedRemove(i);
   }
