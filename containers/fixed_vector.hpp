@@ -229,9 +229,7 @@ struct FixedVector {
   }
 
   void pop() noexcept {
-    if (len != 0) {
-      len--;
-    }
+    if (len != 0) len--;
   }
 
   std::optional<T> popBack() noexcept {
@@ -250,16 +248,17 @@ struct FixedVector {
 
   void unorderedRemove(size_t ind) noexcept {
     if (ind >= len) return;
-    arr[ind] = std::move(arr[len - 1]);
-    --len;
+    arr[ind] = std::move(arr[--len]);
   }
 
   void deleteVal(T val) noexcept {
+    if (len == 0) return;
     for (int i = len - 1; i >= 0; --i)
       if (arr[i] == val) orderedRemove(i);
   }
 
   void deleteValUnordered(T val) noexcept {
+    if (len == 0) return;
     for (int i = len - 1; i >= 0; --i)
       if (arr[i] == val) unorderedRemove(i);
   }
