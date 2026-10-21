@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <optional>
 #include <span>
-#include <typeinfo>
+#include <type_traits>
 
 template <typename T, size_t N>
 struct Array {
@@ -59,6 +59,34 @@ struct Array {
     return true;
   }
 
+  Array& operator+=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val += scalar;
+    return *this;
+  }
+
+  Array& operator-=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val -= scalar;
+    return *this;
+  }
+
+  Array& operator*=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val *= scalar;
+    return *this;
+  }
+
+  Array& operator/=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val /= scalar;
+    return *this;
+  }
+
   constexpr T& operator[](size_t i) noexcept {
     return arr[i];
   }
@@ -109,10 +137,6 @@ struct Array {
     return std::span<const T>(&arr[0], N);
   }
 
-  const char* type() const noexcept {
-    return typeid(T).name();
-  }
-
   template <typename PrintFn>
   void print(PrintFn printFn) const noexcept {
     std::printf("[");
@@ -121,14 +145,6 @@ struct Array {
       printFn(arr[i]);
     }
     std::printf("]\n");
-  }
-
-  void printInfo() const noexcept {
-    std::printf("length: ");
-    std::printf("%zu", N);
-    std::printf(", type: ");
-    printf("%s", type());
-    std::printf("\n");
   }
 
   constexpr T* end() noexcept {
