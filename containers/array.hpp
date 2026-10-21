@@ -52,6 +52,13 @@ struct Array {
 
   constexpr ~Array() = default;
 
+  constexpr bool operator==(const Array& other) const {
+    for (size_t i = 0; i < N; ++i) {
+      if (!(arr[i] == other.arr[i])) return false;
+    }
+    return true;
+  }
+
   constexpr T& operator[](size_t i) noexcept {
     return arr[i];
   }
