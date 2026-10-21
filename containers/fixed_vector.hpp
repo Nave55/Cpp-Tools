@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <optional>
 #include <span>
-#include <typeinfo>
+#include "../tools/concepts.hpp"
 
 template <typename T, size_t N>
 struct FixedVector {
@@ -65,6 +65,41 @@ struct FixedVector {
 
   ~FixedVector() noexcept = default;
 
+  bool operator==(const FixedVector<T, N>& other) const {
+    for (size_t i = 0; i < len; ++i) {
+      if (!(arr[i] == other.arr[i])) return false;
+    }
+    return true;
+  }
+
+  FixedVector& operator+=(const T& scalar)
+    requires Numeric<T>
+  {
+    for (auto& val : *this) val += scalar;
+    return *this;
+  }
+
+  FixedVector& operator-=(const T& scalar)
+    requires Numeric<T>
+  {
+    for (auto& val : *this) val -= scalar;
+    return *this;
+  }
+
+  FixedVector& operator*=(const T& scalar)
+    requires Numeric<T>
+  {
+    for (auto& val : *this) val *= scalar;
+    return *this;
+  }
+
+  FixedVector& operator/=(const T& scalar)
+    requires Numeric<T>
+  {
+    for (auto& val : *this) val /= scalar;
+    return *this;
+  }
+
   T& operator[](size_t i) noexcept {
     return arr[i];
   }
@@ -105,10 +140,6 @@ struct FixedVector {
     return std::span<T>(&arr[0], len);
   }
 
-  const char* type() const noexcept {
-    return typeid(T).name();
-  }
-
   template <typename PrintFn>
   void print(PrintFn printFn) const noexcept {
     std::printf("[");
@@ -123,10 +154,7 @@ struct FixedVector {
     std::printf("length: ");
     std::printf("%zu", len);
     std::printf(", capacity: ");
-    std::printf("%zu", cap);
-    std::printf(", type: ");
-    printf("%s", type());
-    std::printf("\n");
+    std::printf("%zu\n", cap);
   }
 
   T* end() noexcept {
