@@ -146,7 +146,7 @@ public:
   // union
   HashSet operator|(const HashSet& other) const noexcept {
     HashSet result(*this);
-    for (auto& key : other) result.insert(key);
+    for (const auto& key : other) result.insert(key);
     return result;
   }
 
@@ -154,10 +154,17 @@ public:
   HashSet operator&(const HashSet& other) const noexcept {
     HashSet result(slab_size, m_slabs.cap, bucket_amt, *m_alloc);
 
-    for (auto& key : *this)
+    for (const auto& key : *this)
       if (other.contains(key)) result.insert(key);
 
     return result;
+  }
+
+  bool operator==(const HashSet& other) const noexcept {
+    for (const auto& key : other) {
+      if (!this->contains(key)) return false;
+    }
+    return true;
   }
 
   bool contains(const K& key) const noexcept {
