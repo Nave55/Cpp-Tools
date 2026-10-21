@@ -229,8 +229,7 @@ public:
 
   void rtrim() {
     while (len > 0 && isspace((unsigned char)ptr[len - 1])) {
-      ptr[len - 1] = '\0';
-      len--;
+      ptr[--len] = '\0';
     }
   }
 
@@ -362,38 +361,33 @@ public:
 
   void pop() noexcept {
     if (len > 0) {
-      --len;
-      ptr[len] = '\0';
+      ptr[--len] = '\0';
     }
   }
 
   std::optional<char> popBack() noexcept {
     if (len == 0) return std::nullopt;
     char val = ptr[len - 1];
-    --len;
-    ptr[len] = '\0';
+    ptr[--len] = '\0';
     return val;
   }
 
   char popBackUnsafe() noexcept {
     char val = ptr[len - 1];
-    --len;
-    ptr[len] = '\0';
+    ptr[--len] = '\0';
     return val;
   }
 
   void orderedRemove(size_t ind) noexcept {
     if (ind >= len) return;
     memmove(ptr + ind, ptr + ind + 1, (len - ind - 1));
-    --len;
-    ptr[len] = '\0';
+    ptr[--len] = '\0';
   }
 
   void unorderedRemove(size_t ind) noexcept {
     if (ind >= len) return;
     ptr[ind] = ptr[len - 1];
-    --len;
-    ptr[len] = '\0';
+    ptr[--len] = '\0';
   }
 
   void deleteVal(char val) noexcept {
