@@ -19,13 +19,13 @@ struct Tracker {
 
   auto malloc(size_t size) -> void* {
     ttl += size;
-    return ::malloc(size);
+    return std::malloc(size);
   }
 
   template <typename T>
   auto free(T* memory) -> void {
     freed += sizeof(T);
-    ::free(memory);
+    std::free(memory);
   }
 
   void memReport() const {
