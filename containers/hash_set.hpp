@@ -29,7 +29,7 @@ public:
         bucket_amt(m_nextPow2(bucket_amt)),
         m_alloc(&alloc),
         m_buckets(static_cast<m_Node**>(
-            alloc.memAllocate(sizeof(m_Node*) * this->bucket_amt, alignof(m_Node*)))),
+            alloc.allocate(sizeof(m_Node*) * this->bucket_amt, alignof(m_Node*)))),
         m_slabs(0, slabs, alloc) {
     if (!m_buckets) panic("HashSet: bucket allocation failed");
     for (size_t i = 0; i < this->bucket_amt; ++i) m_buckets[i] = nullptr;
@@ -56,10 +56,10 @@ public:
     clear();
 
     if (m_alloc->canAlwaysFree()) {
-      m_alloc->memFree(m_buckets);
+      m_alloc->free(m_buckets);
       for (size_t i = 0; i < m_slabs.len; ++i) {
         auto val = m_slabs.at(i);
-        if (val.has_value()) m_alloc->memFree(static_cast<void*>(val.value()));
+        if (val.has_value()) m_alloc->free(static_cast<void*>(val.value()));
       }
     }
   }
@@ -75,7 +75,7 @@ public:
         m_free(nullptr),
         m_alloc(o.m_alloc),
         m_buckets(static_cast<m_Node**>(
-            m_alloc->memAllocate(sizeof(m_Node*) * bucket_amt, alignof(m_Node*)))),
+            m_alloc->allocate(sizeof(m_Node*) * bucket_amt, alignof(m_Node*)))),
         m_slabs(0, o.m_slabs.cap, *m_alloc) {
     if (!m_buckets) panic("HashSet copy: bucket allocation failed");
     for (size_t i = 0; i < bucket_amt; ++i) m_buckets[i] = nullptr;
@@ -256,7 +256,7 @@ public:
     const size_t old_cap = bucket_amt;
 
     m_Node** new_buckets =
-        static_cast<m_Node**>(m_alloc->memAllocate(sizeof(m_Node*) * new_cap, alignof(m_Node*)));
+        static_cast<m_Node**>(m_alloc->allocate(sizeof(m_Node*) * new_cap, alignof(m_Node*)));
     if (!new_buckets) panic("HashSet::rehash: bucket allocation failed");
 
     for (size_t i = 0; i < new_cap; ++i) new_buckets[i] = nullptr;
@@ -272,7 +272,7 @@ public:
       }
     }
 
-    if (m_alloc->canAlwaysFree()) m_alloc->memFree(m_buckets);
+    if (m_alloc->canAlwaysFree()) m_alloc->free(m_buckets);
 
     m_buckets = new_buckets;
     bucket_amt = new_cap;
@@ -432,7 +432,7 @@ private:
     slab_size = nodes;
     slab_bytes = nodes * node_size;
 
-    void* raw = m_alloc->memAllocate(slab_bytes, alignof(m_Node));
+    void* raw = m_alloc->allocate(slab_bytes, alignof(m_Node));
     if (!raw) panic("HashSet::allocate_slab: allocator failed");
 
     m_slabs.pushBack(raw);
