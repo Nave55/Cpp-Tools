@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <optional>
 #include <span>
+#include <type_traits>
 #include "../memory/allocators.hpp"
 
 template <typename T>
@@ -131,6 +132,34 @@ public:
       if (!(ptr[i] == other.ptr[i])) return false;
     }
     return true;
+  }
+
+  Vector& operator+=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val += scalar;
+    return *this;
+  }
+
+  Vector& operator-=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val -= scalar;
+    return *this;
+  }
+
+  Vector& operator*=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val *= scalar;
+    return *this;
+  }
+
+  Vector& operator/=(const T& scalar)
+    requires std::is_arithmetic_v<T>
+  {
+    for (auto& val : *this) val /= scalar;
+    return *this;
   }
 
   T& operator[](size_t i) noexcept {
@@ -338,8 +367,9 @@ public:
   }
 
   template <typename Fn>
-  void mapIter(Fn fn) noexcept {
+  Vector& mapIter(Fn fn) noexcept {
     for (size_t i = 0; i < len; ++i) fn(ptr[i]);
+    return *this;
   }
 
   template <typename Rtype>
