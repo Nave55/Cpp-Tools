@@ -30,7 +30,8 @@ constexpr uintptr_t alignForwardUintptr(const uintptr_t p, const uintptr_t align
   return (p + mask) & ~mask;
 }
 
-inline void* align_forward(void* p, size_t alignment) noexcept {
+inline void* alignFoward(void* p, size_t alignment) noexcept {
+  if (!isPowerOfTwo(alignment)) panic("Not Aligned");
   uintptr_t addr = reinterpret_cast<uintptr_t>(p);
   uintptr_t aligned = (addr + alignment - 1) & ~(alignment - 1);
   return reinterpret_cast<void*>(aligned);
@@ -49,7 +50,7 @@ enum class AllocType {
 };
 
 // *******************************************************
-//                Allocator Interface
+//                  Allocator Interface
 // *******************************************************
 
 class MemAllocator {
@@ -62,13 +63,9 @@ public:
                        size_t alignment) noexcept = 0;
 
   virtual void free(void* ptr) noexcept = 0;
-
   virtual bool canResize() const noexcept = 0;
-
   virtual bool canAlwaysFree() const noexcept = 0;
-
   virtual size_t getChunkSize() const noexcept = 0;
-
   virtual AllocType getType() const noexcept = 0;
 };
 
@@ -132,6 +129,7 @@ struct Heap final : public MemAllocator {
 //                   Tracking Allocator
 // *******************************************************
 
+// uses a header to track allocations, so adds 8 bytes per allocation
 struct Tracking final : public MemAllocator {
   size_t user_bytes = 0;  // user bytes allocated
   size_t user_freed = 0;  // user bytes freed
@@ -281,10 +279,10 @@ public:
     if (alignment > 128) alignment = 128;
 
     unsigned char* raw = m_buf + m_curr_off;
-    unsigned char* aligned = static_cast<unsigned char*>(align_forward(raw, alignment));
+    unsigned char* aligned = static_cast<unsigned char*>(alignFoward(raw, alignment));
 
     size_t new_off = aligned - m_buf;
-    if (new_off + size > m_buf_len) panic("Arena can't allocate. Not aligned.");
+    if (new_off + size > m_buf_len) panic("Arena out of memory");
 
     m_prev_off = new_off;
     m_curr_off = new_off + size;
