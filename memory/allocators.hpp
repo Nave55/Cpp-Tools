@@ -30,7 +30,7 @@ constexpr uintptr_t alignForwardUintptr(const uintptr_t p, const uintptr_t align
   return (p + mask) & ~mask;
 }
 
-inline void* alignFoward(void* p, size_t alignment) noexcept {
+inline void* alignForward(void* p, size_t alignment) noexcept {
   if (!isPowerOfTwo(alignment)) panic("Not Aligned");
   uintptr_t addr = reinterpret_cast<uintptr_t>(p);
   uintptr_t aligned = (addr + alignment - 1) & ~(alignment - 1);
