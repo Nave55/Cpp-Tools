@@ -135,28 +135,28 @@ public:
   }
 
   Vector& operator+=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val += scalar;
     return *this;
   }
 
   Vector& operator-=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val -= scalar;
     return *this;
   }
 
   Vector& operator*=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val *= scalar;
     return *this;
   }
 
   Vector& operator/=(const T& scalar)
-    requires Numeric<T>
+    requires Concept::Numeric<T>
   {
     for (auto& val : *this) val /= scalar;
     return *this;
